@@ -4,7 +4,6 @@ git clone https://github.com/RAIVNLab/sugar-crepe.git
 
 # Remove unnecessary SugarCrepe
 rm -f -r ./sugar-crepe/.git ./sugar-crepe/.gitignore ./sugar-crepe/assets ./sugar-crepe/gpt-4v-results
-rm -f -r 
 
 # Remove unnecessary ARO files
 rm -f -r ./aro/.git aro/.gitignore ./aro/scripts ./aro/temp_data 
