@@ -32,7 +32,7 @@ def evaluate_open_clip_on_winoground(model_name, pretrained):
     - group_score is the accuracy of the model if both previous pairings are correct
     """
     # auth_token = "" 
-    auth_token = "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"  # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
+    auth_token = ""  # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
     winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
 
     model, _, preprocess  = open_clip.create_model_and_transforms(model_name, pretrained)
