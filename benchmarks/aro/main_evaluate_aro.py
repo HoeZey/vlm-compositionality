@@ -82,7 +82,7 @@ def evaluate_open_clip_aro(model_name, pretrained):
     model, image_preprocess = load_model(model_name, pretrained, device)
     results = {}
 
-    for dataset in dataset_names:
+    for dataset_name in dataset_names:
         dataset = load_dataset(dataset_name, image_preprocess=image_preprocess, download=download)
         
         # For some models we just pass the PIL images, so we'll need to handle them in the collate_fn. 
@@ -97,9 +97,9 @@ def evaluate_open_clip_aro(model_name, pretrained):
 
         mean_acc = df['Accuracy'].mean()
 
-        results[dataset] = {
+        results[dataset_name] = {
             "Model": model_name,
-            "Accuracy": accuracy_mean,
+            "Accuracy": mean_acc,
             "Seed": seed
         }   
    
