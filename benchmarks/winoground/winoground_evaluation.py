@@ -63,6 +63,7 @@ class Winoground_evaluation:
 
             image0 = preprocess(example["image_0"].convert("RGB")).unsqueeze(0).to(device)
             image1 = preprocess(example["image_1"].convert("RGB")).unsqueeze(0).to(device)
+            text = text.to(device)
             
             with torch.no_grad(), torch.cuda.amp.autocast():
                 
