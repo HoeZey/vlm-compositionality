@@ -74,8 +74,8 @@ import open_clip
 # from model_zoo import get_model
 # from dataset_zoo import get_dataset
 from misc import seed_all, _default_collate, save_scores
-from benchmark.aro.model_zoo.clip_models import CLIPWrapper
-from benchmark.aro.dataset_zoo.aro_datasets import VG_Relation, VG_Attribution, COCO_Order, Flickr30k_Order
+from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
+from benchmarks.aro.dataset_zoo.aro_datasets import VG_Relation, VG_Attribution, COCO_Order, Flickr30k_Order
 # from benchmark.aro.dataset_zoo.retrieval import COCO_Retrieval, Flickr30k_Retrieval
 
 # def config():
@@ -109,16 +109,16 @@ def load_dataset(dataset_name, image_preprocess=None, text_perturb_fn=None, imag
     download: Whether to allow downloading images if they are not found.
     """
     if dataset_name == "VG_Relation": 
-        from benchmark.aro.dataset_zoo.aro_datasets import get_visual_genome_relation
+        from benchmarks.aro.dataset_zoo.aro_datasets import get_visual_genome_relation
         return get_visual_genome_relation(image_preprocess=image_preprocess, text_perturb_fn=text_perturb_fn, image_perturb_fn=image_perturb_fn, download=download, *args, **kwargs)
     elif dataset_name == "VG_Attribution":
-        from benchmark.aro.dataset_zoo.aro_datasets import get_visual_genome_attribution
+        from benchmarks.aro.dataset_zoo.aro_datasets import get_visual_genome_attribution
         return get_visual_genome_attribution(image_preprocess=image_preprocess, text_perturb_fn=text_perturb_fn, image_perturb_fn=image_perturb_fn, download=download, *args, **kwargs)
     elif dataset_name == "COCO_Order":
-        from benchmark.aro.dataset_zoo.aro_datasets import get_coco_order
+        from benchmarks.aro.dataset_zoo.aro_datasets import get_coco_order
         return get_coco_order(image_preprocess=image_preprocess, text_perturb_fn=text_perturb_fn, image_perturb_fn=image_perturb_fn, download=download, *args, **kwargs)
     elif dataset_name == "Flickr30k_Order":
-        from benchmark.aro.dataset_zoo.aro_datasets import get_flickr30k_order
+        from benchmarks.aro.dataset_zoo.aro_datasets import get_flickr30k_order
         return get_flickr30k_order(image_preprocess=image_preprocess, text_perturb_fn=text_perturb_fn, image_perturb_fn=image_perturb_fn, download=download, *args, **kwargs)
     # elif dataset_name == "COCO_Retrieval":
     #     from benchmark.aro.dataset_zoo.retrieval import get_coco_retrieval
