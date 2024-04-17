@@ -45,7 +45,12 @@ class Winoground_evaluation:
         # auth_token = "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"  # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if torch.backends.mps.is_available():
+            device = "mps"
+        elif torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
 
         model, _, preprocess  = open_clip.create_model_and_transforms(model_name, pretrained, device=device)
         tokenizer = open_clip.get_tokenizer(model_name)

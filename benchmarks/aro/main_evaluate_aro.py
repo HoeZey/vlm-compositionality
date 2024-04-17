@@ -2,9 +2,9 @@ import sys
 sys.path.append("..")
 
 import pandas as pd
-
+import torch
 from torch.utils.data import DataLoader
-from dataset_zoo import VG_Relation, VG_Attribution , COCO_Order , Flickr30k_Order
+# from dataset_zoo import VG_Relation, VG_Attribution , COCO_Order , Flickr30k_Order
 
 
 #should I include only 2/4 datasets or all 4 inc "COCO_Order", "Flickr30k_Order"?
@@ -67,13 +67,14 @@ from dataset_zoo import VG_Relation, VG_Attribution , COCO_Order , Flickr30k_Ord
 import argparse
 import os
 import pandas as pd
+import torch
 
 from torch.utils.data import DataLoader
 import open_clip
 
 # from model_zoo import get_model
 # from dataset_zoo import get_dataset
-from misc import seed_all, _default_collate, save_scores
+from benchmarks.aro.misc import seed_all, _default_collate, save_scores
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
 from benchmarks.aro.dataset_zoo.aro_datasets import VG_Relation, VG_Attribution, COCO_Order, Flickr30k_Order
 # from benchmark.aro.dataset_zoo.retrieval import COCO_Retrieval, Flickr30k_Retrieval
@@ -94,7 +95,7 @@ from benchmarks.aro.dataset_zoo.aro_datasets import VG_Relation, VG_Attribution,
 
     
 def load_model(model_name, pretrained, device):
-    model, _, image_preprocess = open_clip.create_model_and_transforms(model_name="coca_ViT-B-32", pretrained="laion2B-s13B-b90k", device=device)
+    model, _, image_preprocess = open_clip.create_model_and_transforms(model_name, pretrained, device=device)
     model = model.eval()
     clip_model = CLIPWrapper(model, device) 
     return clip_model, image_preprocess
@@ -134,7 +135,14 @@ def evaluate_open_clip_aro(model_name, pretrained):
 
     seed = 1
     # model_name = "openai-clip:ViT-B/32"
-    device = "cuda"
+    # # device = "cpu"
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.backends.mps.is_available():
+        device = "mps"
+    elif torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
     seed_all(seed)
     dataset_name = "VG_Relation"
     download = True
