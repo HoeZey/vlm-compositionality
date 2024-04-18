@@ -1,10 +1,25 @@
 import torch
 import open_clip
 import open_flamingo 
+from PIL.Image import Image
 from open_clip import tokenizer
+from torch import FloatTensor
+from abc import ABC, abstractmethod
+from typing import Union
 
 
-class OpenClipWrapper(torch.nn.Module):
+class VLModelWrapper(ABC, torch.nn.Module):
+    '''
+    The forward function of VLModelWrapper should return FloatTensor
+    containing the softmax probabilities per text, i.e. out: R^N_text
+    '''
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+
+class OpenClipWrapper(VLModelWrapper):
     def __init__(self, backbone='ViT-B-16', pretrained='openai') -> None:
         super().__init__()
         model, _, preprocess = open_clip.create_model_and_transforms(backbone, pretrained=pretrained)
@@ -12,24 +27,27 @@ class OpenClipWrapper(torch.nn.Module):
         self.preprocess = preprocess
         
     @torch.no_grad()
-    def _encode_inputs(self, img, texts):
-        img_feats = self.model.encode_image(self.preprocess(img)).float()
+    def _encode_inputs(self, img: Union[Image, torch.Tensor], texts: list[str]) -> tuple[FloatTensor, FloatTensor]:
+        img_feats = self.model.encode_image(self.preprocess(img).unsqueeze(0)).float()
         text_feats = self.model.encode_text(tokenizer.tokenize(texts)).float()
         return img_feats, text_feats
     
-    def _classify(img_feats, text_feats):
+    def _classify(self, img_feats, text_feats) -> FloatTensor:
         img_feats /= img_feats.norm(dim=-1, keepdim=True)
         text_feats /= text_feats.norm(dim=-1, keepdim=True)
         similarity = text_feats @ img_feats.T
         text_probs = (100.0 * similarity).softmax(dim=-1)
-        # top_probs, top_labels = txt_probs.topk(5, dim=-1) 
-        return text_probs
+        return text_probs.squeeze(0)
     
-    def forward(self, imgs, texts):
-        return self._classify(self._encode_inputs(imgs, texts))
+    def forward(self, imgs, texts) -> FloatTensor:
+        return self._classify(*self._encode_inputs(imgs, texts))
     
+    @property
+    def name(self) -> str:
+        return 'clip'
 
-class FlamingoWrapper(torch.nn.Module):
+
+class OpenFlamingoWrapper(VLModelWrapper):
     def __init__(self) -> None:
         super().__init__()
         model, preprocess, tokenizer = open_flamingo.create_model_and_transforms(
@@ -45,7 +63,7 @@ class FlamingoWrapper(torch.nn.Module):
         self.tokenizer = tokenizer
         self.tokenizer.padding_side = "left" 
 
-    def _generate_text(self, imgs, texts):
+    def _generate_text(self, imgs, texts) -> tuple[list[int], list[str]]:
         imgs = self.preprocess(imgs)
         texts = self.tokenizer(texts)
         out = self.model.generate(
@@ -55,9 +73,14 @@ class FlamingoWrapper(torch.nn.Module):
             max_new_tokens=20,
             num_beams=3,
         )
-        return out
+        return out, self.tokenizer.decode(out)
 
-    def forward(self, imgs, texts):
-        out = self._generate_text(imgs, texts)
+    def forward(self, imgs, texts) -> list[str]:
+        out_raw, out_decoded = self._generate_text(imgs, texts)
+        return out_decoded
+    
+    @property
+    def name(self) -> str:
+        return 'flamingo'
 
         
