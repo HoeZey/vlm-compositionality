@@ -5,6 +5,9 @@ from functools import partial
 import torch.nn.functional as nnf
 from torchvision import transforms as T
 
+import nltk
+nltk.download('punkt')
+
 # A lot of the approaches here are inspired from the wonderful paper from O'Connor and Andreas 2021.
 # https://github.com/lingo-mit/context-ablations
 
