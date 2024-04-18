@@ -16,3 +16,4 @@ dependencies:
       - python-dotenv
       - open_clip_torch
       - notebook
+      - open_flamingo

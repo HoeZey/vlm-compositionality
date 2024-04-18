@@ -11,7 +11,7 @@ from typing import Union
 class VLModelWrapper(ABC, torch.nn.Module):
     '''
     The forward function of VLModelWrapper should return FloatTensor
-    containing the softmax probabilities per text, i.e. out: R^N_text
+    containing the logits per text, i.e. out: R^N_text
     '''
     @property
     @abstractmethod
@@ -35,9 +35,8 @@ class OpenClipWrapper(VLModelWrapper):
     def _classify(self, img_feats, text_feats) -> FloatTensor:
         img_feats /= img_feats.norm(dim=-1, keepdim=True)
         text_feats /= text_feats.norm(dim=-1, keepdim=True)
-        similarity = text_feats @ img_feats.T
-        text_probs = (100.0 * similarity).softmax(dim=-1)
-        return text_probs.squeeze(0)
+        similarity = 100 * (text_feats @ img_feats.T)
+        return similarity.squeeze(0)
     
     def forward(self, imgs, texts) -> FloatTensor:
         return self._classify(*self._encode_inputs(imgs, texts))
