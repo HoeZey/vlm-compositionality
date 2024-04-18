@@ -6,7 +6,7 @@ import re
 import os
 import pickle
 import collections
-from torch._six import string_classes
+# from torch._six import string_classes
 import PIL
 
 
@@ -87,8 +87,8 @@ def _default_collate(batch):
         return torch.tensor(batch, dtype=torch.float64)
     elif isinstance(elem, int):
         return torch.tensor(batch)
-    elif isinstance(elem, string_classes):
-        return batch
+    # elif isinstance(elem, string_classes):
+    #     return batch
     
     # For curious reader, this is what we added to the original code:
     elif (isinstance(elem, PIL.Image.Image) or isinstance(elem, PIL.JpegImagePlugin.JpegImageFile)):
