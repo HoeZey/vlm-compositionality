@@ -33,20 +33,25 @@ class WinoGroundWrapper:
         '''
         scores = []
         for d_i in tqdm(self.data):
-            texts = [d_i['caption_0'], d_i['caption_1']]
-            img0 = d_i['image_0']
-            img1 = d_i['image_1']
+            text0, text1 = d_i['caption_0'], d_i['caption_1']
+            img0, img1 = d_i['image_0'], d_i['image_1']
 
             with torch.no_grad(), torch.cuda.amp.autocast():
-                out_img0 = model(img0, texts)
-                out_img1 = model(img1, texts)
+                out_i0_t0 = model(img0, text0)
+                out_i0_t1 = model(img0, text1)
+                out_i1_t0 = model(img1, text0)
+                out_i1_t1 = model(img1, text1)
             
-            scores.append({'id': d_i['id'], 'out_img0': out_img0, 'out_img1': out_img1})
+            scores.append({
+                'id': d_i['id'], 
+                'i0_t0': out_i0_t0, 'i0_t1': out_i0_t1, 
+                'i1_t0': out_i1_t0, 'i1_t1': out_i1_t1
+            })
 
         return {
-            'text_score': np.mean([text_correct(s['out_img0'], s['out_img1']) for s in scores]),
-            'image_score': np.mean([image_correct(s['out_img0'], s['out_img1']) for s in scores]),
-            'group_score': np.mean([group_correct(s['out_img0'], s['out_img1']) for s in scores])
+            'text_score': np.mean([text_correct(s) for s in scores]),
+            'image_score': np.mean([image_correct(s) for s in scores]),
+            'group_score': np.mean([group_correct(s) for s in scores])
         }
 
 

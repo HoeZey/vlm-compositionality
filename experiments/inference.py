@@ -14,6 +14,6 @@ if __name__ == '__main__':
     for model in models:
         for benchmark in benchmarks:
             result = benchmark.evaluate(model)
-            print(f'{model.name:<5} {benchmark.name:<13} {result}')
             results[model.name][benchmark.name] = result
-    print(results)
+            print(f'{model.name:<5} {benchmark.name:<13} {result}')
+    # print(results)

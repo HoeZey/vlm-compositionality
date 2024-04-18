@@ -17,3 +17,4 @@ dependencies:
       - open_clip_torch
       - notebook
       - open_flamingo
+      - transformers
