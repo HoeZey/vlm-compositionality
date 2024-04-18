@@ -277,7 +277,8 @@ class COCO_Order(Dataset):
         
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
         correct_mask = (preds == 0)
-        records = [{"Precision@1": np.mean(correct_mask)}]
+        # records = [{"Precision@1": np.mean(correct_mask)}]
+        records = [{"Accuracy": np.mean(correct_mask)}]
         return records
 
 
@@ -343,7 +344,8 @@ class Flickr30k_Order(Dataset):
         
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
         correct_mask = (preds == 0)
-        result_records = [{"Precision@1": np.mean(correct_mask)}]
+        # result_records = [{"Precision@1": np.mean(correct_mask)}]
+        result_records = [{"Accuracy": np.mean(correct_mask)}]
         return result_records
 
 
