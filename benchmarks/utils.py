@@ -11,13 +11,13 @@ def get_winoground_datset():
     return load_dataset('facebook/winoground', token=HF_ACCESS_TOKEN, trust_remote_code=True)
 
 
-def text_correct(out_img0, out_img1):
-    return out_img0[0] > out_img0[1] and out_img1[0] > out_img1[1]
+def text_correct(score):
+    return score['i0_t0'] > score['i0_t1'] and score['i1_t0'] > score['i1_t1']
 
 
-def image_correct(out_img0, out_img1):
-    return out_img0[0] > out_img1[0] and out_img0[1] > out_img1[1]
+def image_correct(score):
+    return score['i0_t0'] > score['i1_t0'] and score['i0_t1'] > score['i1_t1']
 
 
-def group_correct(out_img1, out_img2):
-    return image_correct(out_img1, out_img2) and text_correct(out_img1, out_img2)
+def group_correct(score):
+    return image_correct(score) and text_correct(score)
