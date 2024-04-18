@@ -58,33 +58,30 @@ class Winoground_evaluation:
         from tqdm import tqdm
         winoground_clip_scores = []
         for example in tqdm(winoground):
-            text = [example["caption_0"], example["caption_1"]]
-            text = tokenizer(text)
+            text0 = example["caption_0"]
+            text1 = example["caption_1"]
+            text0 = tokenizer(text0).to(device)    
+            text1 = tokenizer(text1).to(device)          
+
 
             image0 = preprocess(example["image_0"].convert("RGB")).unsqueeze(0).to(device)
             image1 = preprocess(example["image_1"].convert("RGB")).unsqueeze(0).to(device)
-            text = text.to(device)
+
             
             with torch.no_grad(), torch.cuda.amp.autocast():
                 
-                image_features = model.encode_image(image0)
-                text_features = model.encode_text(text)
-                image_features /= image_features.norm(dim=-1, keepdim=True)
-                text_features /= text_features.norm(dim=-1, keepdim=True)
+                image0_features = model.encode_image(image0)
+                image1_features = model.encode_image(image1)
 
-                output_i0 = (100.0 * image_features @ text_features.T)
-                c0_i0 = output_i0[0][0].item()
-                c1_i0 = output_i0[0][1].item()
+                text0_features = model.encode_text(text0)
+                text0_features /= text0_features.norm(dim=-1, keepdim=True)
+                text1_features = model.encode_text(text1)
+                text1_features /= text1_features.norm(dim=-1, keepdim=True)
 
-                image_features = model.encode_image(image1)
-                text_features = model.encode_text(text)
-                image_features /= image_features.norm(dim=-1, keepdim=True)
-                text_features /= text_features.norm(dim=-1, keepdim=True)
-
-                # output_i1 = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-                output_i1 = (100.0 * image_features @ text_features.T)
-                c0_i1 = output_i1[0][0].item()
-                c1_i1 = output_i1[0][1].item()
+                c0_i0 = (100.0 * image0_features @ text0_features.T)
+                c0_i1 = (100.0 * image1_features @ text0_features.T)
+                c1_i0 = (100.0 * image0_features @ text1_features.T)
+                c1_i1 = (100.0 * image1_features @ text1_features.T)
 
 
             winoground_clip_scores.append({"id" : example["id"], "c0_i0": c0_i0, "c0_i1": c0_i1, "c1_i0": c1_i0, "c1_i1": c1_i1})
@@ -104,4 +101,6 @@ class Winoground_evaluation:
         acc_val = {"text_score": text_correct_count/denominator, "image_score": image_correct_count/denominator, "group_score": group_correct_count/denominator}
 
         return {"Winoground_accuracies": acc_val}
+
+
 
