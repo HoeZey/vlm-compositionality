@@ -35,6 +35,9 @@ pyrightconfig.json
 .ipynb_checkpoints
 
 .env
+venv/
+oryx-build-commands.txt
+
 
 benchmarks/__pycache__/
 
