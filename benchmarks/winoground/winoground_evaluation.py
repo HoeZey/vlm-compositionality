@@ -21,10 +21,10 @@ class Winoground_evaluation:
         return result["c0_i0"] > result["c0_i1"] and result["c1_i1"] > result["c1_i0"]
 
     def group_correct(self, result):
-        return Winoground_evaluation.image_correct(result) and Winoground_evaluation.text_correct(result)
+        return self.image_correct(result) and self.text_correct(result)
 
 
-    def evaluate_open_clip_on_winoground(self, model_name, pretrained):
+    def evaluate_open_clip_on_winoground(self):
         """ 
         input: model_name (str) - the name of the model to be used (can be choosen out of open_clip.list_pretrained())
                 pretrained (str) - the name of the pre-trined weigths corresponding to the model_name 
@@ -52,8 +52,8 @@ class Winoground_evaluation:
         else:
             device = "cpu"
 
-        model, _, preprocess  = open_clip.create_model_and_transforms(model_name, pretrained, device=device)
-        tokenizer = open_clip.get_tokenizer(model_name)
+        model, _, preprocess  = open_clip.create_model_and_transforms(self.model_name, self.pretrained, device=device)
+        tokenizer = open_clip.get_tokenizer(self.model_name)
 
         from tqdm import tqdm
         winoground_clip_scores = []
@@ -95,9 +95,9 @@ class Winoground_evaluation:
         image_correct_count = 0
         group_correct_count = 0
         for result in winoground_clip_scores:
-            text_correct_count += 1 if text_correct(result) else 0
-            image_correct_count += 1 if image_correct(result) else 0
-            group_correct_count += 1 if group_correct(result) else 0
+            text_correct_count += 1 if self.text_correct(result) else 0
+            image_correct_count += 1 if self.image_correct(result) else 0
+            group_correct_count += 1 if self.group_correct(result) else 0
 
             denominator = len(winoground_clip_scores)
         
