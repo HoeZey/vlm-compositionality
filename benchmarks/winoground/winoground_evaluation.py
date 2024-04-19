@@ -41,8 +41,7 @@ class Winoground_evaluation:
         - image_score is the accuracy of the model on matching image with the correct text
         - group_score is the accuracy of the model if both previous pairings are correct
         """
-        auth_token = "" 
-        # auth_token = "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"  # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
+        auth_token = "" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
 
         if torch.backends.mps.is_available():
@@ -72,6 +71,9 @@ class Winoground_evaluation:
                 
                 image0_features = model.encode_image(image0)
                 image1_features = model.encode_image(image1)
+                image0_features /= image0_features.norm(dim=-1, keepdim=True)
+                image1_features /= image1_features.norm(dim=-1, keepdim=True)
+                # print("doing img norm")
 
                 text0_features = model.encode_text(text0)
                 text0_features /= text0_features.norm(dim=-1, keepdim=True)

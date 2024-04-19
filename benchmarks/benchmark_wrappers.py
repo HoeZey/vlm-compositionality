@@ -48,10 +48,27 @@ class WinoGroundWrapper:
                 'i1_t0': out_i1_t0, 'i1_t1': out_i1_t1
             })
 
+        text_correct_count = 0
+        image_correct_count = 0
+        group_correct_count = 0
+        for result in scores:
+            text_correct_count += 1 if text_correct(result) else 0
+            image_correct_count += 1 if image_correct(result) else 0
+            group_correct_count += 1 if group_correct(result) else 0
+
+            denominator = len(scores)
+        
+
+        # return {
+        #     'text_score': np.mean([text_correct(s) for s in scores]),
+        #     'image_score': np.mean([image_correct(s) for s in scores]),
+        #     'group_score': np.mean([group_correct(s) for s in scores])
+        # }
+
         return {
-            'text_score': np.mean([text_correct(s) for s in scores]),
-            'image_score': np.mean([image_correct(s) for s in scores]),
-            'group_score': np.mean([group_correct(s) for s in scores])
+            "text_score": text_correct_count/denominator, 
+            "image_score": image_correct_count/denominator,
+            "group_score": group_correct_count/denominator
         }
 
 

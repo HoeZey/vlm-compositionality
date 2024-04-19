@@ -12,11 +12,11 @@ def get_winoground_datset():
 
 
 def text_correct(score):
-    return score['i0_t0'] > score['i0_t1'] and score['i1_t0'] > score['i1_t1']
+    return score['i0_t0'] > score['i0_t1'] and score['i1_t1'] > score['i1_t0'] 
 
 
 def image_correct(score):
-    return score['i0_t0'] > score['i1_t0'] and score['i0_t1'] > score['i1_t1']
+    return score['i0_t0'] > score['i1_t0'] and score['i1_t1'] > score['i0_t1']
 
 
 def group_correct(score):
