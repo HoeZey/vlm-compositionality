@@ -1,4 +1,4 @@
-import clip
+import open_clip
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -18,7 +18,7 @@ class CLIPWrapper:
         tqdm_loader.set_description("Computing text embeddings")
         for i in tqdm_loader:
             text = texts[i: min(num_text, i+text_batch_size)]
-            text_input = clip.tokenize(text).to(self.device) 
+            text_input = open_clip.tokenize(text).to(self.device) 
             text_feats = self.model.encode_text(text_input)
             if normalize:
                 text_feats = F.normalize(text_feats,dim=-1)      
@@ -76,7 +76,7 @@ class CLIPWrapper:
             
             caption_options = []
             for c_option in batch["caption_options"]:
-                caption_tokenized = torch.cat([clip.tokenize(c) for c in c_option])
+                caption_tokenized = torch.cat([open_clip.tokenize(c) for c in c_option])
                 caption_embeddings = self.model.encode_text(caption_tokenized.to(self.device)).cpu().numpy() # B x D
                 caption_embeddings = caption_embeddings / np.linalg.norm(caption_embeddings, axis=1, keepdims=True) # B x D
                 caption_options.append(np.expand_dims(caption_embeddings, axis=1))

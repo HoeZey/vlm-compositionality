@@ -30,8 +30,13 @@ def main(_A: argparse.Namespace):
     
     print(eval_results)
 
-    if not os.path.exists(_A.output_DIR):
-        os.makedirs(_A.output_DIR, exist_ok=True)
+    if not os.path.exists(_A.output_dir):
+        os.makedirs(_A.output_dir, exist_ok=True)
     
-    with open(os.path.join(_A.output_DIR, f"{_A.benchmark}_{_A.model_name}_{_A.pretrained}_results.json"), "w") as f:
+    with open(os.path.join(_A.output_dir, f"{_A.benchmark}_{_A.model_name}_{_A.pretrained}_results.json"), "w") as f:
         json.dump(eval_results, f)
+
+
+if __name__ == "__main__":
+    _A = parser.parse_args()
+    main(_A)

@@ -45,3 +45,8 @@ benchmarks/aro/__pycache__/
 benchmarks/winoground/__pycache__/
 benchmarks/winoground/wandb/
 benchmarks/winoground/PATH/
+
+jobs/
+datasets/
+outputs/
+.cache/
