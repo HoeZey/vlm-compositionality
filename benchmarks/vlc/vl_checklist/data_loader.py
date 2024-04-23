@@ -6,7 +6,7 @@ import json
 class DataLoader(object):
     def __init__(self, corpus_names, type ,task='itm', version="v1") -> None:
         self.root_dir = os.path.dirname(os.path.realpath(__file__))#.replace("/vl_checklist", "")
-        self.cur_dir = os.path.realpath(os.path.join(os.curdir, 'vlc'))
+        self.cur_dir = os.path.realpath(os.path.join(os.curdir, 'benchmarks', 'vlc'))
         print(self.cur_dir)
 
         self.version = version
@@ -48,6 +48,7 @@ class DataLoader(object):
             for x in m:
                 path, texts_dict = x
                 path = os.path.join(config["IMG_ROOT"], path)
+                print(path)
                 if os.path.exists(path):
                     corpus[corpus_name].append({
                         "path": path,
@@ -56,6 +57,7 @@ class DataLoader(object):
                     })
                 # else:
                 #     print(path)
+        print(corpus)
         return corpus
                 
 

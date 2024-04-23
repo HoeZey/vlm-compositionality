@@ -89,8 +89,6 @@ class Evaluate(object):
                 for n,i in enumerate(zip(sample_t,sample_f)):
                     add_caption(i[0]["img_path"],'text:'+i[0]["text"],'score:'+str(i[0]["score"]),None,None,sample_path,f'cor-{n+1}')
                     add_caption(i[1]["img_path"],'text:'+i[1]["text"],'score:'+str(i[1]["score"]),None,None,sample_path,f'incor-{n+1}')
-
-    
         elif self.task == 'itc':
             for name in d.data:
                 sample_true = []
