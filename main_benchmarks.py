@@ -23,6 +23,10 @@ BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
 
 def main(_A: argparse.Namespace):
+
+    print(f"Model list: {_A.model_list}")
+    print(f"Pretrained list: {_A.pretrained_list}")
+    
     for model_name, pretrained in zip(_A.model_list, _A.pretrained_list):
         wandb.init(
             # set the wandb project where this run will be logged
