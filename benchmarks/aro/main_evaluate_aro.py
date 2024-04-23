@@ -69,8 +69,7 @@ class ARO_evaluation:
             device = "cpu"
 
         seed_all(seed)
-        # dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
-        dataset_names =["Flickr30k_Order"]
+        dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
         download = True
         batch_size = 32
         num_workers = 4
