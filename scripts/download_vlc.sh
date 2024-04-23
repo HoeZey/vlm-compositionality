@@ -6,12 +6,12 @@
 # TODO all drive links should have checksums
 
 if [ ! -d data/hake ];then
-    mkdir ./data/hake
+    mkdir data/vlc/hake
 fi
 if [ ! -d data/hake/images ];then
-    mkdir ./data/hake/images
+    mkdir data/vlc/hake/images
 fi
-cd data/hake
+cd data/vlc/hake
 
 # ---------------V-COCO Dataset--------------------
 echo "Downloading V-COCO Dataset"
@@ -28,7 +28,9 @@ if [ ! -d vcoco ];then
     mkdir vcoco
 fi
 
+echo "Unzipping train zip"
 unzip -q train2017.zip -d vcoco/
+echo "Unzipping eval zip"
 unzip -q val2017.zip -d vcoco/
 #unzip test2017.zip -d vcoco/
 
@@ -66,7 +68,7 @@ echo "HCVRD(part) Dataset Downloaded!\n"
 echo "Downloading openimages(part) Dataset"
 
 # source: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
-python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1XTWYLyL1h-9jJ49dsXmtRCv8GcupVrvM' openimages.tar.gz
+# python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1XTWYLyL1h-9jJ49dsXmtRCv8GcupVrvM' openimages.tar.gz
 tar -xzf openimages.tar.gz -C ./
 rm openimages.tar.gz
 
