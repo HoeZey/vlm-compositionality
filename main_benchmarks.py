@@ -46,7 +46,7 @@ def main(_A: argparse.Namespace):
                 wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]['Accuracy']})
                 wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']['Accuracy']})
                 wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']['Accuracy']})
-                wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies ']['Flickr30k_Order'] ['Accuracy']})
+                wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies']['Flickr30k_Order'] ['Accuracy']})
                 
             elif benchmark == "sugarcrepe":
                 benchmark_module = SugarCrepe_evaluation(model_name, pretrained)
