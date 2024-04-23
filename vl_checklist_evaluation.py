@@ -1,17 +1,17 @@
+import sys
+sys.path.append('..')
 from uuid import uuid4
 
 import os
 import json
 from transformers import CLIPProcessor, CLIPModel
-from benchmarks.vl-checklist.vl_checklist.evaluate import Evaluate
-import torch
-from PIL import Image
-
+from benchmarks.vlc.vl_checklist.evaluate import Evaluate
 # from densely_captioned_images.repro.config import VLC_ROOT_PATH, EVAL_LOG_PATH
 from clip_vlc_wrap import VLCtoHFCLIPWrap
 
-VLC_ROOT_PATH = './benchmarks/vl-checklist/'
-EVAL_LOG_PATH = './log_tmp/'
+
+VLC_ROOT_PATH = "./benchmarks/vlc/"
+EVAL_LOG_PATH = "./log_tmp/"
 
 
 ATTRIBUTE_YAML = """
@@ -120,7 +120,7 @@ def run_vlc_on_model(model: CLIPModel, processor: CLIPProcessor, model_name=None
 
     tasks = ['itc']
 #    tasks = ['itm']
-    output_dirname = os.path.join(EVAL_LOG_PATH, 'vlc', model_name)
+    output_dirname = os.path.join(EVAL_LOG_PATH, 'vlc/' + model_name + '/')
     os.makedirs(output_dirname, exist_ok=True)
     for task in tasks:
         for BASE_YAML in [ATTRIBUTE_YAML, OBJECT_YAML, RELATION_SPATIAL_YAML, RELATION_ACTION_YAML]:

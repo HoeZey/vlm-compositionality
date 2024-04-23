@@ -1,5 +1,5 @@
 git clone https://github.com/mertyg/vision-language-models-are-bows.git aro
-git clone https://github.com/om-ai-lab/VL-CheckList.git vl-checklist
+git clone https://github.com/om-ai-lab/VL-CheckList.git vlc
 git clone https://github.com/RAIVNLab/sugar-crepe.git 
 
 # Remove unnecessary SugarCrepe

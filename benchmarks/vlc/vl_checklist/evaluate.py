@@ -1,5 +1,5 @@
-from vl_checklist.utils import chunks, add_caption
-from vl_checklist.data_loader import DataLoader
+from .utils import chunks, add_caption
+from .data_loader import DataLoader
 from tqdm import tqdm
 import yaml
 import os 
@@ -12,6 +12,7 @@ class Evaluate(object):
     def __init__(self, config_file, model) -> None:    
         self.root_dir = os.path.dirname(os.path.realpath(__file__))    
         self.cur_dir = os.path.realpath(os.curdir)
+        print(config_file)
         m = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
         self.batch_size = m["BATCH_SIZE"]
         self.model = model                   

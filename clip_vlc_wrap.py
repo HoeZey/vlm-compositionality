@@ -4,7 +4,7 @@
 # This source code is licensed under the CC-BY-NC license found in the
 # LICENSE file in the root directory of this source tree.
 
-from vl_checklist.vlp_model import VLPModel
+from benchmarks.vlc.vl_checklist.vlp_model import VLPModel
 
 import torch
 from PIL import Image

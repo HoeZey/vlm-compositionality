@@ -1,0 +1,11 @@
+
+MAX_NUM: 2000
+MODEL_NAME: "clip-baseline"
+BATCH_SIZE: 4
+TASK: "itc"
+DATA:
+  TYPES: ["Attribute/action", "Attribute/color", "Attribute/material", "Attribute/size", "Attribute/state"]
+  TEST_DATA: ["vg","vaw"]
+OUTPUT:
+  DIR: "./log_tmp/vlc/clip-baseline/"
+  NUM: 5
