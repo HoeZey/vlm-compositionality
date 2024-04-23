@@ -5,46 +5,46 @@
 # --------------------------------------------------------
 # TODO all drive links should have checksums
 
-if [ ! -d data/hake ];then
-    mkdir data/vlc/hake
-fi
-if [ ! -d data/hake/images ];then
-    mkdir data/vlc/hake/images
-fi
-cd data/vlc/hake
+# if [ ! -d data/hake ];then
+#     mkdir data/hake
+# fi
+# if [ ! -d data/hake/images ];then
+#     mkdir data/hake/images
+# fi
+# cd data/hake
 
-# ---------------V-COCO Dataset--------------------
-echo "Downloading V-COCO Dataset"
+# # ---------------V-COCO Dataset--------------------
+# echo "Downloading V-COCO Dataset"
 
-URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
-URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
-#URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
+# URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
+# URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
+# #URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
 
-wget -N $URL_2017_Train_images
-wget -N $URL_2017_Val_images
-#wget -N $URL_2017_Test_images
+# wget -N $URL_2017_Train_images
+# wget -N $URL_2017_Val_images
+# #wget -N $URL_2017_Test_images
 
-if [ ! -d vcoco ];then
-    mkdir vcoco
-fi
+# if [ ! -d vcoco ];then
+#     mkdir vcoco
+# fi
 
-echo "Unzipping train zip"
-unzip -q train2017.zip -d vcoco/
-echo "Unzipping eval zip"
-unzip -q val2017.zip -d vcoco/
-#unzip test2017.zip -d vcoco/
+# echo "Unzipping train zip"
+# unzip -q train2017.zip -d vcoco/
+# echo "Unzipping eval zip"
+# unzip -q val2017.zip -d vcoco/
+# #unzip test2017.zip -d vcoco/
 
-rm train2017.zip
-rm val2017.zip
-#rm test2017.zip
+# rm train2017.zip
+# rm val2017.zip
+# #rm test2017.zip
 
-echo "V-COCO Dataset Downloaded!\n"
+# echo "V-COCO Dataset Downloaded!\n"
 
 # ---------------HICO-DET Dataset-------------------
 echo "Downloading HICO-DET Dataset"
 
 # source: https://github.com/YueLiao/CDN#hico-det
-python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1QZcJmGVlF9f4h-XLWe9Gkmnmj2z1gSnk' hico_20160224_det.tar.gz
+srun python ../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1QZcJmGVlF9f4h-XLWe9Gkmnmj2z1gSnk' hico_20160224_det.tar.gz
 tar -xzf hico_20160224_det.tar.gz -C ./
 rm hico_20160224_det.tar.gz
 
@@ -57,7 +57,7 @@ if [ ! -d hcvrd ];then
     mkdir hcvrd
 fi
 # source: https://github.com/DirtyHarryLYL/HAKE/blob/master/Images/download_image/hcvrd_url.json
-python ../reproduction/densely_captioned_images/repro/setup_data/download.py '../reproduction/densely_captioned_images/repro/setup_data/hcvrd_url.json' ./hcvrd
+srun python ../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download.py '../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/hcvrd_url.json' ./hcvrd
 
 echo "HCVRD(part) Dataset Downloaded!\n"
 
@@ -80,7 +80,7 @@ echo "openimages(part) Dataset Downloaded!\n"
 echo "Downloading pic Dataset"
 
 # source: https://picdataset.com/challenge/task/download/
-python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1fBJh0mdWhOkOyN5X8is7a2MDb2CE7eCw' pic.tar.gz
+srun python ../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1fBJh0mdWhOkOyN5X8is7a2MDb2CE7eCw' pic.tar.gz
 tar -xzf pic.tar.gz -C ./
 rm pic.tar.gz
 mkdir pic
@@ -96,7 +96,7 @@ echo "pic Dataset Downloaded!\n"
 # Sources: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
 echo "Downloading hake Dataset 1"
 
-python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1Smrsy9AsOUyvj66ytGmB5M3WknljwuXL' hake_images_20190730.tar.gz
+srun python ../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1Smrsy9AsOUyvj66ytGmB5M3WknljwuXL' hake_images_20190730.tar.gz
 tar -xzf hake_images_20190730.tar.gz -C ./
 rm hake_images_20190730.tar.gz
 
@@ -105,7 +105,7 @@ echo "hake part 1 Dataset Downloaded!\n"
 
 echo "Downloading hake Dataset 2"
 
-python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '14K_4FfjviJNDVLJdGM96W2ZLN55dDb2-' hake_images_20200614.tar.gz
+srun python ../benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '14K_4FfjviJNDVLJdGM96W2ZLN55dDb2-' hake_images_20200614.tar.gz
 tar -xzf hake_images_20200614.tar.gz -C ./
 rm hake_images_20200614.tar.gz
 
