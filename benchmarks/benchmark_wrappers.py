@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from models.model_wrappers import VLModelWrapper
 from .utils import *
+from constants import HF_ACCESS_TOKEN
 
 
 class Benchmark:
@@ -16,7 +17,11 @@ class Benchmark:
 
 class WinoGroundWrapper:
     def __init__(self) -> None:
-        self.data = get_winoground_datset()['test']
+        self.data = load_dataset(
+            'facebook/winoground', 
+            token=HF_ACCESS_TOKEN, 
+            trust_remote_code=True
+        )['test']
 
     def evaluate(self, model: VLModelWrapper) -> dict[str, float]:
         ''' 
@@ -37,10 +42,10 @@ class WinoGroundWrapper:
             img0, img1 = d_i['image_0'], d_i['image_1']
 
             with torch.no_grad(), torch.cuda.amp.autocast():
-                out_i0_t0 = model(img0, text0)
-                out_i0_t1 = model(img0, text1)
-                out_i1_t0 = model(img1, text0)
-                out_i1_t1 = model(img1, text1)
+                out_i0_t0 = model.predict(img0, text0)
+                out_i0_t1 = model.predict(img0, text1)
+                out_i1_t0 = model.predict(img1, text0)
+                out_i1_t1 = model.predict(img1, text1)
             
             scores.append({
                 'id': d_i['id'], 
@@ -58,19 +63,11 @@ class WinoGroundWrapper:
 
             denominator = len(scores)
         
-
-        # return {
-        #     'text_score': np.mean([text_correct(s) for s in scores]),
-        #     'image_score': np.mean([image_correct(s) for s in scores]),
-        #     'group_score': np.mean([group_correct(s) for s in scores])
-        # }
-
         return {
-            "text_score": text_correct_count/denominator, 
-            "image_score": image_correct_count/denominator,
-            "group_score": group_correct_count/denominator
+            'text_score': text_correct_count/denominator, 
+            'image_score': image_correct_count/denominator,
+            'group_score': group_correct_count/denominator
         }
-
 
     @property
     def name(self) -> str:
@@ -90,10 +87,26 @@ class VLCheckListWrapper:
 
 class SugarCrepeWrapper:
     def __init__(self) -> None:
-        pass
+        self.data = {
+            'add-obj'    : load_dataset('HuggingFaceM4/SugarCrepe_add_obj', trust_remote_code=True)['test'],
+            'add_att'    : load_dataset('HuggingFaceM4/SugarCrepe_add_att', trust_remote_code=True)['test'],
+            'replace_obj': load_dataset('HuggingFaceM4/SugarCrepe_replace_obj', trust_remote_code=True)['test'],
+            'replace_att': load_dataset('HuggingFaceM4/SugarCrepe_replace_att', trust_remote_code=True)['test'],
+            'replace_rel': load_dataset('HuggingFaceM4/SugarCrepe_replace_rel', trust_remote_code=True)['test'],
+            'swap_obj'   : load_dataset('HuggingFaceM4/SugarCrepe_swap_obj', trust_remote_code=True)['test'],
+            'swap_att'   : load_dataset('HuggingFaceM4/SugarCrepe_swap_att', trust_remote_code=True)['test']
+        }
 
-    def evaluate(self, model) -> list[float]:
-        return 0.0
+    def evaluate(self, model: VLModelWrapper) -> list[float]:
+        results = {}
+        for name, data_dict in self.data.items():
+            n_correct = 0
+            for data in tqdm(data_dict, desc=f'Evaluating {name}'):
+                out = model.predict([data['image']], data['tested_labels'])
+                n_correct += int(out.argmax() == 0)
+            count = len(data_dict)
+            results[name] = n_correct / count
+        return results
 
     @property
     def name(self) -> str:

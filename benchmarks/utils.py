@@ -1,14 +1,7 @@
 import os
 from dotenv import load_dotenv
 from datasets import load_dataset
-
-
-load_dotenv()
-HF_ACCESS_TOKEN = os.getenv('HF_ACCESS_TOKEN')
-
-
-def get_winoground_datset():
-    return load_dataset('facebook/winoground', token=HF_ACCESS_TOKEN, trust_remote_code=True)
+from constants import HF_ACCESS_TOKEN
 
 
 def text_correct(score):

@@ -51,7 +51,7 @@ class OpenClipWrapper(VLModelWrapper):
         similarity = (100 * img_feats @ text_feats.T)
         return similarity.squeeze(0)
 
-    def forward(self, imgs, texts) -> FloatTensor:
+    def predict(self, imgs: list[Image], texts: list[str]) -> FloatTensor:
         return self._classify(*self._encode_inputs(imgs, texts))
     
     @property
