@@ -98,7 +98,7 @@ class SugarCrepe_evaluation:
         """
         
         sugarcrepe = {
-            'add-obj'    : load_dataset("HuggingFaceM4/SugarCrepe_add_obj", use_auth_token=self.auth_token, trust_remote_code=True)["test"],
+            'add_obj'    : load_dataset("HuggingFaceM4/SugarCrepe_add_obj", use_auth_token=self.auth_token, trust_remote_code=True)["test"],
             'add_att'    : load_dataset("HuggingFaceM4/SugarCrepe_add_att", use_auth_token=self.auth_token, trust_remote_code=True)["test"],
             'replace_obj': load_dataset("HuggingFaceM4/SugarCrepe_replace_obj", use_auth_token=self.auth_token, trust_remote_code=True)["test"],
             'replace_att': load_dataset("HuggingFaceM4/SugarCrepe_replace_att", use_auth_token=self.auth_token, trust_remote_code=True)["test"],
