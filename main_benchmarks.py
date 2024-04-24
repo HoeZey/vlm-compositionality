@@ -23,10 +23,15 @@ BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
 
 def main(_A: argparse.Namespace):
+
+    print(f"Model list: {_A.model_list}")
+    print(f"Pretrained list: {_A.pretrained_list}")
+    
     for model_name, pretrained in zip(_A.model_list, _A.pretrained_list):
         wandb.init(
             # set the wandb project where this run will be logged
             project="all_benchmarks",
+            entity="fomo-vlm-comp",
 
             # track hyperparameters and run metadata
             config={
@@ -35,19 +40,18 @@ def main(_A: argparse.Namespace):
             }
             )
         for benchmark in BENCHMARKS_LIST:
-            wandb.log({'benchmark': benchmark})
             if benchmark == "aro":
                 benchmark_module = ARO_evaluation(model_name, pretrained)
                 eval_results = benchmark_module.evaluate_open_clip_on_aro()
-                wandb.log({'VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]['Accuracy']})
-                wandb.log({'VG_A' : eval_results['ARO_accuracies']['VG_Attribution']['Accuracy']})
-                wandb.log({'coco': eval_results['ARO_accuracies' ]['COCO_order']['Accuracy']})
-                wandb.log({'Flick' : eval_results['ARO_accuracies ']['Flickr30k_Order'] ['Accuracy']})
+                wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]['Accuracy']})
+                wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']['Accuracy']})
+                wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']['Accuracy']})
+                wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies']['Flickr30k_Order'] ['Accuracy']})
                 
             elif benchmark == "sugarcrepe":
                 benchmark_module = SugarCrepe_evaluation(model_name, pretrained)
                 eval_results = benchmark_module.evaluate_open_clip_on_sugarcrepe()
-                wandb.log({'Sugarcrepe_add-obj' : eval_results['SugarCrepe_accuracies']['add-obj']})
+                wandb.log({'Sugarcrepe_add-obj' : eval_results['SugarCrepe_accuracies']['add_obj']})
                 wandb.log({'Sugarcrepe_add_att' : eval_results['SugarCrepe_accuracies']['add_att']})
                 wandb.log({'Sugarcrepe_replace_obj' : eval_results['SugarCrepe_accuracies']['replace_obj']})
                 wandb.log({'Sugarcrepe_replace_att' : eval_results['SugarCrepe_accuracies']['replace_att']})
@@ -65,6 +69,8 @@ def main(_A: argparse.Namespace):
                 pass
             else:
                 raise ValueError(f"Unknown benchmark: {benchmark}")
+
+        wandb.finish()
     
     print(eval_results)
 
@@ -73,3 +79,8 @@ def main(_A: argparse.Namespace):
     
     with open(os.path.join(_A.output_DIR, f"{_A.benchmark}_{_A.model_name}_{_A.pretrained}_results.json"), "w") as f:
         json.dump(eval_results, f)
+
+
+if __name__ == "__main__":
+    _A = parser.parse_args()
+    main(_A)

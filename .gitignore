@@ -50,3 +50,4 @@ jobs/
 datasets/
 outputs/
 .cache/
+wandb/
