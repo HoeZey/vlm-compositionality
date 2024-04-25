@@ -26,7 +26,7 @@ class ARO_evaluation:
     def load_model(self, model_name, pretrained, device):
         model, _, image_preprocess = open_clip.create_model_and_transforms(model_name, pretrained, device=device)
         model = model.eval()
-        clip_model = CLIPWrapper(model, device) 
+        clip_model = CLIPWrapper(model_name, model, device) 
         return clip_model, image_preprocess
 
 
