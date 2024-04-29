@@ -75,11 +75,11 @@ class Winoground_generative_evaluation:
 
             print ("Example: #", total)
             
-            Winoground_generative_evaluation.show_example(winoground, idx)
+            self.show_example(benchmark=winoground, idx=idx)
 
             try:
                 ## match caption for image_0
-                answer_0 = Winoground_generative_evaluation.llava_image_to_caption(image_0, caption_0, caption_1)
+                answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
                 image_to_caption_results[str(idx)+"_image_0"] = answer_0
                 print ("\nUsing image_0 to select the better caption: ")
                 print (answer_0)
@@ -88,7 +88,7 @@ class Winoground_generative_evaluation:
                 print ("\n")
 
                 ## match caption for image_1
-                answer_1 = Winoground_generative_evaluation.llava_image_to_caption(image_1, caption_0, caption_1)
+                answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
                 image_to_caption_results[str(idx)+"_image_1"] = answer_1
                 print ("\nUsing image_1 to select the better caption: ")
                 print (answer_1)
