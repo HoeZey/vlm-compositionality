@@ -115,7 +115,8 @@ class Winoground_generative_evaluation:
     This class is defined to evaluate generative models on winoground dataset.
     """
 
-    def __init__(self, model, processor, prompt_name, evaluation_type):
+    def __init__(self, model_name, model, processor, prompt_name, evaluation_type):
+        self.model_name = model_name
         self.model = model
         self.processor = processor  
         self.prompt_name = prompt_name  
@@ -222,6 +223,29 @@ class Winoground_generative_evaluation:
         output = output.split('ASSISTANT:')[1]
         return output    
 
+    def BLIP2_image_to_caption_binary_match(self, caption, image):
+
+        if self.prompt_name == "gpt4":
+            prompt = "Question: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+        if self.prompt_name == "gpt4-smallerprompt":
+            prompt = "Question: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+
+        # Generate
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output = output.split('ASSISTANT:')[1]
+        return output    
+    
+
     def evaluate_winoground_LLava(self):
 
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
@@ -253,7 +277,10 @@ class Winoground_generative_evaluation:
                 result = {}
                 # try:
                 ## map string results to nemurical
-                ans_c0_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    ans_c0_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    ans_c0_i0 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
                 if "yes" in ans_c0_i0.lower():
@@ -261,7 +288,10 @@ class Winoground_generative_evaluation:
                 else:
                     result["c0_i0"] = 0.0
 
-                ans_c0_i1 = self.llava_image_to_caption_binary_match(caption_0, image_1)
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    ans_c0_i1 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    ans_c0_i1 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
                 if "yes" in ans_c0_i1.lower():
@@ -269,7 +299,10 @@ class Winoground_generative_evaluation:
                 else:
                     result["c0_i1"] = 0.0   
 
-                ans_c1_i0 = self.llava_image_to_caption_binary_match(caption_1, image_0)
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    ans_c1_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    ans_c1_i0 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
                 print ("Match between C1 and I0: ", ans_c1_i0)
                 if "yes" in ans_c1_i0.lower():
@@ -277,7 +310,10 @@ class Winoground_generative_evaluation:
                 else:
                     result["c1_i0"] = 0.0
 
-                ans_c1_i1 = self.llava_image_to_caption_binary_match(caption_1, image_1)
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    ans_c1_i1 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    ans_c1_i1 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
                 print ("Match between C1 and I1: ", ans_c1_i1)
                 if "yes" in ans_c1_i1.lower():

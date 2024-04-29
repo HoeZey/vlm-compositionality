@@ -3,10 +3,11 @@ import os
 import json
 from benchmarks.aro.main_evaluate_aro import ARO_evaluation, ARO_generative_evaluation
 from benchmarks.sugarcrepe.sugarcrepe_evaluation import SugarCrepe_evaluation
-from transformers import AutoProcessor, LlavaForConditionalGeneration
 from benchmarks.winoground.winoground_evaluation import Winoground_generative_evaluation
+from transformers import AutoProcessor, LlavaForConditionalGeneration
+from transformers import Blip2Processor, Blip2ForConditionalGeneration
 import wandb
-
+import torch
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -35,8 +36,13 @@ def main(_A: argparse.Namespace):
     
     for model_name in _A.model_list:
         if model_name == "llava-hf/llava-1.5-7b-hf":
-                model = LlavaForConditionalGeneration.from_pretrained(model_name)
-                processor = AutoProcessor.from_pretrained(model_name)
+            model = LlavaForConditionalGeneration.from_pretrained(model_name)
+            processor = AutoProcessor.from_pretrained(model_name)
+        elif model_name == "Salesforce/blip2-opt-2.7b":            
+            processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
+            model = Blip2ForConditionalGeneration.from_pretrained(
+                "Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16
+            )  # doctest: +IGNORE_RESULT
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged
@@ -51,7 +57,7 @@ def main(_A: argparse.Namespace):
                 )
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
-                    benchmark_module = Winoground_generative_evaluation(model, processor, prompt_name, _A.evaluation_type)
+                    benchmark_module = Winoground_generative_evaluation(model_name, model, processor, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_winoground_LLava()
                     if _A.evaluation_type == "accuracy":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy"]})
