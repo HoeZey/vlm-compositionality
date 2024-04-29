@@ -33,6 +33,9 @@ def main(_A: argparse.Namespace):
     
     
     for model_name in _A.model_list:
+        if model_name == "llava-hf/llava-1.5-7b-hf":
+                model = LlavaForConditionalGeneration.from_pretrained(model_name)
+                processor = AutoProcessor.from_pretrained(model_name)
         for benchmark in BENCHMARKS_LIST:
             if benchmark == "winoground":
                 for prompt_name in PROMPT_LIST:
@@ -47,9 +50,7 @@ def main(_A: argparse.Namespace):
                         "prompt": prompt_name
                         }
                         )
-                    if model_name == "llava-hf/llava-1.5-7b-hf":
-                        model = LlavaForConditionalGeneration.from_pretrained(model_name)
-                        processor = AutoProcessor.from_pretrained(model_name)
+                    
                     benchmark_module = Winoground_generative_evaluation(model, processor, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_winoground_LLava()
                     if _A.evaluation_type == "accuracy":
