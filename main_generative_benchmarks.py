@@ -42,7 +42,7 @@ def main(_A: argparse.Namespace):
             device = "cuda" if torch.cuda.is_available() else "cpu"
             processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
             model = Blip2ForConditionalGeneration.from_pretrained(
-                "Salesforce/blip2-opt-2.7b", device_map={"": 0}, torch_dtype=torch.float16
+                "Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16
             )  # doctest: +IGNORE_RESULT
         for prompt_name in PROMPT_LIST:
             wandb.init(
