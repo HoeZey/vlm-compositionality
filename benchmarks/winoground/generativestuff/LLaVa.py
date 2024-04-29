@@ -143,7 +143,7 @@ class Winoground_generative_evaluation:
                 caption_1 = winoground[idx]["caption_1"]
 
                 print ("Example: #", total)
-                self.show_example(idx)
+                self.show_example(benchmark=winoground, idx=idx)
                 result = {}
                 try:
                     ## map string results to nemurical
