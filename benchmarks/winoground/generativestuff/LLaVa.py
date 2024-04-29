@@ -30,9 +30,14 @@ class Winoground_generative_evaluation:
     def llava_image_to_caption(self, image, caption_0, caption_1):
         # prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
 
-        prompt = "USER: <image>\n Given the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
-        prompt += "A. " + caption_0.strip() + "\n"
-        prompt += "B. " + caption_1.strip() + "\n"
+        # prompt = "USER: <image>\n Given the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
+        # prompt += "A. " + caption_0.strip() + "\n"
+        # prompt += "B. " + caption_1.strip() + "\n"
+        # prompt += "ASSISTANT:"
+
+        prompt = "USER: <image>\n Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
+        prompt += "A." + caption_0 + "\n"
+        prompt += "B." + caption_1 + "\n"  
         prompt += "ASSISTANT:"
 
         if self.model_name == "llava-hf/llava-1.5-7b-hf":
