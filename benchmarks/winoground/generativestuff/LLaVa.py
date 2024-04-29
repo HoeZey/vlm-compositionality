@@ -1,7 +1,6 @@
 import torch 
 from PIL import Image
 import requests
-from transformers import AutoProcessor, LlavaForConditionalGeneration
 from datasets import load_dataset
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -9,8 +8,9 @@ import random
 
 class Winoground_generative_evaluation:
 
-    def __init__(self, model_name, prompt_name, evaluation_type):
-        self.model_name = model_name
+    def __init__(self, model, processor, prompt_name, evaluation_type):
+        self.model = model
+        self.processor = processor  
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type  
         # self.pretrained = pretrained
@@ -84,36 +84,27 @@ class Winoground_generative_evaluation:
             max_new_tokens = 15
 
         
-        if self.model_name == "llava-hf/llava-1.5-7b-hf":
-            model = LlavaForConditionalGeneration.from_pretrained(self.model_name)
-            processor = AutoProcessor.from_pretrained(self.model_name)
-
-        inputs = processor(text=prompt, images=image, return_tensors="pt")
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
 
         # Generate
-        generate_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
-        output = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         return output
 
 
     def llava_image_to_caption_binary_match(self, caption, image):
 
         if self.prompt_name == "gpt4":
-            prompt = "Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "Image: "
+            prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-
-        if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                model = LlavaForConditionalGeneration.from_pretrained(self.model_name)
-                processor = AutoProcessor.from_pretrained(self.model_name)
-
-        inputs = processor(text=prompt, images=image, return_tensors="pt")
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
 
         # Generate
-        generate_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
-        output = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         return output    
 
     def evaluate_winoground_LLava(self):

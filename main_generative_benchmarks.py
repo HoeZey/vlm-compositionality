@@ -3,7 +3,7 @@ import os
 import json
 from benchmarks.aro.main_evaluate_aro import ARO_evaluation
 from benchmarks.sugarcrepe.sugarcrepe_evaluation import SugarCrepe_evaluation
-
+from transformers import AutoProcessor, LlavaForConditionalGeneration
 from benchmarks.winoground.generativestuff.LLaVa import Winoground_generative_evaluation
 import wandb
 
@@ -47,10 +47,18 @@ def main(_A: argparse.Namespace):
                         "prompt": prompt_name
                         }
                         )
-                    benchmark_module = Winoground_generative_evaluation(model_name, prompt_name, _A.evaluation_type)
+                    if model_name == "llava-hf/llava-1.5-7b-hf":
+                        model = LlavaForConditionalGeneration.from_pretrained(model_name)
+                        processor = AutoProcessor.from_pretrained(model_name)
+                    benchmark_module = Winoground_generative_evaluation(model, processor, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_winoground_LLava()
-                    wandb.log({'Winoground' : benchmark_module.evaluate_winoground_LLava()})
-                    # wandb.log({'Evaluation_type': _A.evaluation_type})
+                    if _A.evaluation_type == "accuracy":
+                        wandb.log({'Winoground_accuracy' : eval_results["accuracy"]})
+                    elif _A.evaluation_type == "text_image_group_score":
+                        wandb.log({'Winoground_text_score' : eval_results['text_score']})
+                        wandb.log({'Winoground_image_score' : eval_results['image_score']})
+                        wandb.log({'Winoground_group_score' : eval_results['group_score']})
+
                     wandb.finish()
             else:
                 raise ValueError(f"Unknown benchmark: {benchmark}")
