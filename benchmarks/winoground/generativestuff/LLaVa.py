@@ -22,36 +22,39 @@ def show_example(benchmark, idx):
   print("caption_0:", benchmark[idx]["caption_0"])
   print("caption_1:", benchmark[idx]["caption_1"])
 
+def llava_image_to_caption(image, caption_0, caption_1):
+    # prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
+
+    prompt = "USER: <image>\n Given the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
+    prompt += "A. " + caption_0.strip() + "\n"
+    prompt += "B. " + caption_1.strip() + "\n"
+    prompt += "ASSISTANT:"
+
+    model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
+    processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
+
+    inputs = processor(text=prompt, images=image, return_tensors="pt")
+
+    # Generate
+    generate_ids = model.generate(**inputs, max_new_tokens=15)
+    output = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+    return output
+
 
 def evaluate_winoground_LLava():
 
     auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
     winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
 
-    model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
-    processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
-
-
-    inputs = processor(text=prompt, images=image, return_tensors="pt")
-
-    # Generate
-    generate_ids = model.generate(**inputs, max_new_tokens=15)
-    processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    "USER:  \nWhat's the content of the image? ASSISTANT: The image features a busy city street with a stop sign prominently displayed"
-
-
-    ## series of prompts
-    prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
-
     ##Evaluation
-    
+
     ##images are all winoground images
     random.seed(2023)
     subset_idx = random.sample(range(len(winoground)), 100)
     # len(subset_idx[:20])
-    # subset_idx = subset_idx
+    #taking the first 20 for time purposes
+    subset_idx = subset_idx[:20]
     
-    scores = []
     correct = 0
     total = 0
     image_to_caption_results = {} ## for saving results
@@ -69,7 +72,7 @@ def evaluate_winoground_LLava():
 
         try:
             ## match caption for image_0
-            answer_0 = funct_image_to_cap(OAI_KEY, image_0, caption_0, caption_1)
+            answer_0 = llava_image_to_caption(image_0, caption_0, caption_1)
             image_to_caption_results[str(idx)+"_image_0"] = answer_0
             print ("\nUsing image_0 to select the better caption: ")
             print (answer_0)
@@ -78,7 +81,7 @@ def evaluate_winoground_LLava():
             print ("\n")
 
             ## match caption for image_1
-            answer_1 = funct_image_to_cap(OAI_KEY, image_1, caption_0, caption_1)
+            answer_1 = llava_image_to_caption(image_1, caption_0, caption_1)
             image_to_caption_results[str(idx)+"_image_1"] = answer_1
             print ("\nUsing image_1 to select the better caption: ")
             print (answer_1)
@@ -95,3 +98,5 @@ def evaluate_winoground_LLava():
         except:
             print ("skipped")
             continue
+    
+    return {"LLava_Accuracy": correct / total * 100}
