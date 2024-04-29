@@ -240,3 +240,6 @@ class Winoground_generative_evaluation:
                     continue
         
             return {"accuracy": correct / total * 100}
+        
+        else:
+            raise ValueError(f"Unknown evaluation type: {self.evaluation_type}")
