@@ -56,6 +56,7 @@ def main(_A: argparse.Namespace):
                     if _A.evaluation_type == "accuracy":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy"]})
                     elif _A.evaluation_type == "text_image_group_score":
+                        print("Logging scores...")
                         wandb.log({'Winoground_text_score' : eval_results['text_score']})
                         wandb.log({'Winoground_image_score' : eval_results['image_score']})
                         wandb.log({'Winoground_group_score' : eval_results['group_score']})
