@@ -59,7 +59,7 @@ def main(_A: argparse.Namespace):
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, prompt_name, _A.evaluation_type)
-                    eval_results = benchmark_module.evaluate_winoground_LLava()
+                    eval_results = benchmark_module.evaluate_winoground()
                     if _A.evaluation_type == "accuracy":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy"]})
                     elif _A.evaluation_type == "text_image_group_score":

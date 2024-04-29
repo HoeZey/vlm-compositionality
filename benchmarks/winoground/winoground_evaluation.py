@@ -246,7 +246,7 @@ class Winoground_generative_evaluation:
         return output    
     
 
-    def evaluate_winoground_LLava(self):
+    def evaluate_winoground(self):
 
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
