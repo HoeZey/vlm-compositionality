@@ -215,7 +215,9 @@ class Winoground_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        ##if something with llava does not work it is probably due to the to(device) attached here.
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(device="cuda", dtype=torch.float16)
+
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
