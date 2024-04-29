@@ -28,7 +28,6 @@ BENCHMARKS_LIST = ["winoground"]
 def main(_A: argparse.Namespace):
 
     print(f"Model list: {_A.model_list}")
-    print(f"Pretrained list: {_A.pretrained_list}")
     
     for model_name in _A.model_list:
         for benchmark in BENCHMARKS_LIST:
