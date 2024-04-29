@@ -75,7 +75,7 @@ class Winoground_generative_evaluation:
 
             print ("Example: #", total)
             
-            Winoground_generative_evaluation.show_example(idx)
+            Winoground_generative_evaluation.show_example(winoground, idx)
 
             try:
                 ## match caption for image_0
