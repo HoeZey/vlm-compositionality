@@ -184,7 +184,7 @@ class Winoground_generative_evaluation:
                 # except:
                 #     print ("skipped")
                 #     continue
-            return {"text score": text_correct_count/total*100, "image score": image_correct_count/total*100, "group score": group_correct_count/total*100}
+            return {"text_score": text_correct_count/total*100, "image_score": image_correct_count/total*100, "group_score": group_correct_count/total*100}
         
         if self.evaluation_type == "accuracy_score":
             correct = 0
