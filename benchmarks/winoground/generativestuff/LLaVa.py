@@ -89,6 +89,7 @@ class Winoground_generative_evaluation:
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output = output.split('ASSISTANT:')[1]
         return output
 
 
@@ -105,6 +106,7 @@ class Winoground_generative_evaluation:
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output = output.split('ASSISTANT:')[1]
         return output    
 
     def evaluate_winoground_LLava(self):
