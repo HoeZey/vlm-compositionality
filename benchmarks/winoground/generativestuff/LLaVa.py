@@ -127,7 +127,7 @@ class Winoground_generative_evaluation:
             total = 0
             image_caption_match_results = {}
 
-            for idx in subset_idx:
+            for idx in tqdm(subset_idx):
                 image_0 = winoground[idx]["image_0"]
                 image_1 = winoground[idx]["image_1"]
                 caption_0 = winoground[idx]["caption_0"]
