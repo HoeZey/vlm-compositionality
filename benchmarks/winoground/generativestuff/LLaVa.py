@@ -98,7 +98,7 @@ class Winoground_generative_evaluation:
                 ## the example is counted correct only if both matching are correct
                 if correct_a and correct_b:
                     correct += 1
-                    total += 1
+                total += 1
 
                 print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
 
