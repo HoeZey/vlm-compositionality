@@ -145,52 +145,52 @@ class Winoground_generative_evaluation:
                 print ("Example: #", total)
                 self.show_example(benchmark=winoground, idx=idx)
                 result = {}
-                try:
-                    ## map string results to nemurical
-                    ans_c0_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
-                    image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
-                    print ("Match between C0 and I0: ", ans_c0_i0.lower())
-                    if "answer is yes" in ans_c0_i0.lower():
-                        result["c0_i0"] = 1.0
-                    else:
-                        result["c0_i0"] = 0.0
+                # try:
+                ## map string results to nemurical
+                ans_c0_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
+                print ("Match between C0 and I0: ", ans_c0_i0.lower())
+                if "answer is yes" in ans_c0_i0.lower():
+                    result["c0_i0"] = 1.0
+                else:
+                    result["c0_i0"] = 0.0
 
-                    ans_c0_i1 = self.llava_image_to_caption_binary_match(caption_0, image_1)
-                    image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
-                    print ("Match between C0 and I1: ", ans_c0_i1)
-                    if "answer is yes" in ans_c0_i1.lower():
-                        result["c0_i1"] = 1.0
-                    else:
-                        result["c0_i1"] = 0.0   
+                ans_c0_i1 = self.llava_image_to_caption_binary_match(caption_0, image_1)
+                image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
+                print ("Match between C0 and I1: ", ans_c0_i1)
+                if "answer is yes" in ans_c0_i1.lower():
+                    result["c0_i1"] = 1.0
+                else:
+                    result["c0_i1"] = 0.0   
 
-                    ans_c1_i0 = self.llava_image_to_caption_binary_match(caption_1, image_0)
-                    image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
-                    print ("Match between C1 and I0: ", ans_c1_i0)
-                    if "answer is yes" in ans_c1_i0.lower():
-                        result["c1_i0"] = 1.0
-                    else:
-                        result["c1_i0"] = 0.0
+                ans_c1_i0 = self.llava_image_to_caption_binary_match(caption_1, image_0)
+                image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
+                print ("Match between C1 and I0: ", ans_c1_i0)
+                if "answer is yes" in ans_c1_i0.lower():
+                    result["c1_i0"] = 1.0
+                else:
+                    result["c1_i0"] = 0.0
 
-                    ans_c1_i1 = self.llava_image_to_caption_binary_match(caption_1, image_1)
-                    image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
-                    print ("Match between C1 and I1: ", ans_c1_i1)
-                    if "answer is yes" in ans_c1_i1.lower():
-                        result["c1_i1"] = 1.0
-                    else:
-                        result["c1_i1"] = 0.0
+                ans_c1_i1 = self.llava_image_to_caption_binary_match(caption_1, image_1)
+                image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
+                print ("Match between C1 and I1: ", ans_c1_i1)
+                if "answer is yes" in ans_c1_i1.lower():
+                    result["c1_i1"] = 1.0
+                else:
+                    result["c1_i1"] = 0.0
 
-                    print ("result: ", result)
+                print ("result: ", result)
 
-                    text_correct_count += 1 if self.text_correct(result) else 0
-                    image_correct_count += 1 if self.image_correct(result) else 0
-                    group_correct_count += 1 if self.group_correct(result) else 0
+                text_correct_count += 1 if self.text_correct(result) else 0
+                image_correct_count += 1 if self.image_correct(result) else 0
+                group_correct_count += 1 if self.group_correct(result) else 0
 
-                    total += 1
-                    print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
+                total += 1
+                print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
 
-                except:
-                    print ("skipped")
-                    continue
+                # except:
+                #     print ("skipped")
+                #     continue
             return {"text score": text_correct_count/total*100, "image score": image_correct_count/total*100, "group score": group_correct_count/total*100}
         
         if self.evaluation_type == "accuracy_score":
