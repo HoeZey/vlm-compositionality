@@ -159,7 +159,58 @@ class Winoground_generative_evaluation:
             max_new_tokens = 15
         
         elif self.prompt_name == "gpt4-moretokens":
-            prompt = "USER: <image>\n Given the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
+            prompt = "USER: \n Given the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
+            prompt += "A." + caption_0 + "\n"
+            prompt += "B." + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "choices-first":
+            prompt = "USER: <image>\n There are two choices:\n"
+            prompt += "A." + caption_0 + "\n"
+            prompt += "B." + caption_1 + "\n"  
+            prompt += "Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        
+        elif self.prompt_name == "choices-first-numbers":
+            prompt = "USER: <image>\n There are two choices:\n"
+            prompt += "1." + caption_0 + "\n"
+            prompt += "2." + caption_1 + "\n"  
+            prompt += "Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is 1./2..\"\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        else:
+            max_new_tokens = 15
+
+        
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+
+        # Generate
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output = output.split('ASSISTANT:')[1]
+        return output
+
+    def llava_caption_to_image(self, caption, image_0, image_1):
+        # prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
+
+        if self.prompt_name == "gpt4":
+            prompt = "USER: <image>\nGiven the caption and two candidate images, which image is the better match for the given caption? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "A. "
+            max_new_tokens = 15
+        
+        elif self.prompt_name == "gpt4-moretokens":
+            prompt = "USER:\n <image>\nGiven the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
@@ -209,14 +260,20 @@ class Winoground_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        if self.prompt_name == "gpt4-smallerprompt":
+        elif self.prompt_name == "gpt4-smallerprompt":
             prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        if self.prompt_name == "gpt4-evensmallerprompt":
+        elif self.prompt_name == "gpt4-evensmallerprompt":
             prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
@@ -245,6 +302,12 @@ class Winoground_generative_evaluation:
         
         if self.prompt_name == "gpt4-evensmallerprompt":
             prompt = "Question: \n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+        
+        if self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
@@ -290,9 +353,12 @@ class Winoground_generative_evaluation:
                 # try:
                 ## map string results to nemurical
                 if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                    ans_c0_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
+                    captioner = self.llava_image_to_caption_binary_match
+
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    ans_c0_i0 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
+                    captioner = self.BLIP2_image_to_caption_binary_match
+
+                ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
                 if "yes" in ans_c0_i0.lower():
@@ -300,10 +366,7 @@ class Winoground_generative_evaluation:
                 else:
                     result["c0_i0"] = 0.0
 
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                    ans_c0_i1 = self.llava_image_to_caption_binary_match(caption_0, image_0)
-                elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    ans_c0_i1 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
+                ans_c0_i1 = captioner(caption_0, image_1)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
                 if "yes" in ans_c0_i1.lower():
@@ -311,10 +374,7 @@ class Winoground_generative_evaluation:
                 else:
                     result["c0_i1"] = 0.0   
 
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                    ans_c1_i0 = self.llava_image_to_caption_binary_match(caption_0, image_0)
-                elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    ans_c1_i0 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
+                ans_c1_i0 = captioner(caption_1, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
                 print ("Match between C1 and I0: ", ans_c1_i0)
                 if "yes" in ans_c1_i0.lower():
@@ -322,10 +382,7 @@ class Winoground_generative_evaluation:
                 else:
                     result["c1_i0"] = 0.0
 
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                    ans_c1_i1 = self.llava_image_to_caption_binary_match(caption_0, image_0)
-                elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    ans_c1_i1 = self.BLIP2_image_to_caption_binary_match(caption_0, image_0)
+                ans_c1_i1 = captioner(caption_1, image_1)
                 image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
                 print ("Match between C1 and I1: ", ans_c1_i1)
                 if "yes" in ans_c1_i1.lower():
@@ -389,36 +446,32 @@ class Winoground_generative_evaluation:
 
                 #     print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
 
-                try:
-                    ## match caption for image_0
-                    answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
-                    image_to_caption_results[str(idx)+"_image_0"] = answer_0
-                    print ("\nUsing image_0 to select the better caption: ")
-                    print(answer_0)
-                    print(answer_0[:4])
-                    if "A." in answer_0[:4]:
-                        correct_a = True
-                    print ("\n")
+            
+                ## match caption for image_0
+                answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
+                image_to_caption_results[str(idx)+"_image_0"] = answer_0
+                print ("\nUsing image_0 to select the better caption: ")
+                print(answer_0)
+                print(answer_0[:4])
+                if "A." in answer_0[:4]:
+                    correct_a = True
+                print ("\n")
 
-                    ## match caption for image_1
-                    answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
-                    image_to_caption_results[str(idx)+"_image_1"] = answer_1
-                    print("\nUsing image_1 to select the better caption: ")
-                    print(answer_1)
-                    print(answer_1[:4])
-                    if "B." in answer_1[:4]:
-                        correct_b = True
+                ## match caption for image_1
+                answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
+                image_to_caption_results[str(idx)+"_image_1"] = answer_1
+                print("\nUsing image_1 to select the better caption: ")
+                print(answer_1)
+                print(answer_1[:4])
+                if "B." in answer_1[:4]:
+                    correct_b = True
 
-                    ## the example is counted correct only if both matching are correct
-                    if correct_a and correct_b:
-                        correct += 1
-                    total += 1
+                ## the example is counted correct only if both matching are correct
+                if correct_a and correct_b:
+                    correct += 1
+                total += 1
 
-                    print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
-
-                except:
-                    print ("skipped")
-                    continue
+                print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
         
             return {"accuracy_score": correct / total}
         
