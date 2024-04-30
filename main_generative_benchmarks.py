@@ -27,7 +27,7 @@ BENCHMARKS_LIST = ["winoground"]
 def main(_A: argparse.Namespace):
 
     print(f"Model list: {_A.model_list}")
-    if _A.evaluation_type == "accuracy":
+    if _A.evaluation_type == "accuracy_score":
         PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4", "gpt4-smallerprompt"]
