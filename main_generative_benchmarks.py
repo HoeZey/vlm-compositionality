@@ -30,8 +30,8 @@ def main(_A: argparse.Namespace):
     if _A.evaluation_type == "accuracy_score":
         PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
     if _A.evaluation_type == "text_image_group_score":
-        # PROMPT_LIST = ["gpt4", "gpt4-smallerprompt"]
-        PROMPT_LIST = ["gpt4-smallerprompt"]
+        PROMPT_LIST = ["gpt4", "gpt4-smallerprompt", "gpt4-evensmallerprompt"]
+        # PROMPT_LIST = ["gpt4-smallerprompt"]
     
     
     for model_name in _A.model_list:
@@ -39,11 +39,10 @@ def main(_A: argparse.Namespace):
             model = LlavaForConditionalGeneration.from_pretrained(model_name)
             processor = AutoProcessor.from_pretrained(model_name)
         elif model_name == "Salesforce/blip2-opt-2.7b":            
-            device = "cuda" if torch.cuda.is_available() else "cpu"
             processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
             model = Blip2ForConditionalGeneration.from_pretrained(
-                "Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16
-            )  # doctest: +IGNORE_RESULT
+                "Salesforce/blip2-opt-2.7b", load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
+            )  
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged

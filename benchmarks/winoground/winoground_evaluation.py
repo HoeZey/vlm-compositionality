@@ -215,6 +215,12 @@ class Winoground_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
+        if self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
         inputs = self.processor(text=prompt, images=image, return_tensors="pt")
 
         # Generate
@@ -226,23 +232,29 @@ class Winoground_generative_evaluation:
     def BLIP2_image_to_caption_binary_match(self, caption, image):
 
         if self.prompt_name == "gpt4":
-            prompt = "Question: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
 
         if self.prompt_name == "gpt4-smallerprompt":
-            prompt = "Question: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+        
+        if self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "Question: \n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(device="cuda", dtype=torch.float16)
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
 
         # Generate
-        generate_ids = self.model.generate(**inputs)
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True)[0]
-        output = output.split('Answer:')[1]
+        # output = output.split('Answer:')[1]
         return output    
     
 
@@ -352,22 +364,49 @@ class Winoground_generative_evaluation:
                 
                 self.show_example(benchmark=winoground, idx=idx)
 
+                # try:
+                #     ## match caption for image_0
+                #     answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
+                #     image_to_caption_results[str(idx)+"_image_0"] = answer_0
+                #     print ("\nUsing image_0 to select the better caption: ")
+                #     print (answer_0)
+                #     if "answer is a" in answer_0.lower():
+                #         correct_a = True
+                #     print ("\n")
+
+                #     ## match caption for image_1
+                #     answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
+                #     image_to_caption_results[str(idx)+"_image_1"] = answer_1
+                #     print ("\nUsing image_1 to select the better caption: ")
+                #     print (answer_1)
+                #     if "answer is b" in answer_1.lower():
+                #         correct_b = True
+
+                #     ## the example is counted correct only if both matching are correct
+                #     if correct_a and correct_b:
+                #         correct += 1
+                #     total += 1
+
+                #     print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
+
                 try:
                     ## match caption for image_0
                     answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
                     image_to_caption_results[str(idx)+"_image_0"] = answer_0
                     print ("\nUsing image_0 to select the better caption: ")
-                    print (answer_0)
-                    if "answer is a" in answer_0.lower():
+                    print(answer_0)
+                    print(answer_0[:4])
+                    if "A." in answer_0[:4]:
                         correct_a = True
                     print ("\n")
 
                     ## match caption for image_1
                     answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
                     image_to_caption_results[str(idx)+"_image_1"] = answer_1
-                    print ("\nUsing image_1 to select the better caption: ")
-                    print (answer_1)
-                    if "answer is b" in answer_1.lower():
+                    print("\nUsing image_1 to select the better caption: ")
+                    print(answer_1)
+                    print(answer_1[:4])
+                    if "B." in answer_1[:4]:
                         correct_b = True
 
                     ## the example is counted correct only if both matching are correct
