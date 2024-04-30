@@ -381,7 +381,7 @@ class Winoground_generative_evaluation:
                     print ("skipped")
                     continue
         
-            return {"accuracy": correct / total * 100}
+            return {"accuracy_score": correct / total}
         
         else:
             raise ValueError(f"Unknown evaluation type: {self.evaluation_type}")
