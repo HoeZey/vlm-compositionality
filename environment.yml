@@ -21,3 +21,6 @@ dependencies:
       - easydict
       - gdown
       - spacy
+      - accelerate
+      - bitsandbytes
+      - xformers

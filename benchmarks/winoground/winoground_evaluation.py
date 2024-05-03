@@ -115,12 +115,24 @@ class Winoground_generative_evaluation:
     This class is defined to evaluate generative models on winoground dataset.
     """
 
-    def __init__(self, model_name, model, processor, prompt_name, evaluation_type):
+    def __init__(self, 
+                 model_name, 
+                 model, 
+                 processor=None, 
+                 tokenizer=None,
+                 torch_type=None,
+                 device=None,
+                 prompt_name=None, 
+                 evaluation_type=None
+                 ):
         self.model_name = model_name
         self.model = model
-        self.processor = processor  
+        self.processor = processor
+        self.tokenizer = tokenizer
+        self.torch_type = torch_type
+        self.device = device
         self.prompt_name = prompt_name  
-        self.evaluation_type = evaluation_type  
+        self.evaluation_type = evaluation_type
         # self.pretrained = pretrained
             
     def show_example(self, benchmark, idx):
@@ -192,7 +204,7 @@ class Winoground_generative_evaluation:
             max_new_tokens = 15
 
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
@@ -243,7 +255,7 @@ class Winoground_generative_evaluation:
             max_new_tokens = 15
 
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
@@ -284,13 +296,14 @@ class Winoground_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1]
         return output    
+
 
     def BLIP2_image_to_caption_binary_match(self, caption, image):
 
@@ -335,7 +348,55 @@ class Winoground_generative_evaluation:
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True)[0]
         # output = output.split('Answer:')[1]
-        return output    
+        return output
+    
+
+    def cogvlm_image_to_caption_binary_match(self, caption, image):
+
+        if self.prompt_name == "gpt4":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is either Yes or No\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the exact format of: 'Yes' or 'No'\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        inputs = {
+            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+        }
+        if 'cross_images' in input_by_model and input_by_model['cross_images']:
+            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+        # Generate
+        gen_kwargs = {"max_length": 2048,
+                      "do_sample": False} # "temperature": 0.9
+        with torch.no_grad():
+            output = self.model.generate(**inputs, **gen_kwargs)
+            output = output[:, inputs['input_ids'].shape[1]:]
+            output = self.tokenizer.decode(output[0])
+
+        output = output.split("</s>")[0]
+        return output
     
 
     def evaluate_winoground(self):
@@ -359,8 +420,8 @@ class Winoground_generative_evaluation:
             image_caption_match_results = {}
 
             for idx in tqdm(subset_idx):
-                image_0 = winoground[idx]["image_0"]
-                image_1 = winoground[idx]["image_1"]
+                image_0 = winoground[idx]["image_0"].convert("RGB")
+                image_1 = winoground[idx]["image_1"].convert("RGB")
                 caption_0 = winoground[idx]["caption_0"]
                 caption_1 = winoground[idx]["caption_1"]
 
@@ -374,6 +435,12 @@ class Winoground_generative_evaluation:
 
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
                     captioner = self.BLIP2_image_to_caption_binary_match
+                
+                elif self.model_name == "THUDM/cogvlm-chat-hf":
+                    captioner = self.cogvlm_image_to_caption_binary_match
+                
+                else:
+                    raise ValueError(f"Unknown model name: {self.model_name}")
 
                 ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
