@@ -277,6 +277,12 @@ class Winoground_generative_evaluation:
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+        
+        elif self.prompt_name == "alignment":
+            prompt = "USER: <image> Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
 
         inputs = self.processor(text=prompt, images=image, return_tensors="pt")
 
@@ -290,9 +296,10 @@ class Winoground_generative_evaluation:
 
         if self.prompt_name == "gpt4":
             prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
+
 
         if self.prompt_name == "gpt4-smallerprompt":
             prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
@@ -312,7 +319,17 @@ class Winoground_generative_evaluation:
             prompt += "Answer:"
             max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt")
+        if self.prompt_name == "alignment":
+            prompt = "Question: Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+        ##icl arises form data
+        ##why BLIP2 fails? dataset
+
+        # self.model.to(device)
+        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)

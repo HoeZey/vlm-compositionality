@@ -15,6 +15,7 @@ _AA = parser.add_argument
 
 _AA("--model_list", nargs='+', help="List of models to evaluate.")
 _AA("--evaluation_type", help="Evaluation mode to activate. Accuracy overall or text/image/group scores.")
+# _AA("--prompt_list", nargs='+', help="List of prompts to evaluate on.")
 
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
@@ -29,11 +30,12 @@ def main(_A: argparse.Namespace):
     print(f"Model list: {_A.model_list}")
     if _A.evaluation_type == "accuracy_score":
         # PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
-        PROMPT_LIST = ["gpt4-moretokens"]
+        # PROMPT_LIST = ["gpt4-moretokens"]
+        PROMPT_LIST = ["alignment"]
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
-        PROMPT_LIST = ["gpt4-evensmallerprompt2"]
-
+        # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
+        PROMPT_LIST = ["alignment"]
         # PROMPT_LIST = ["gpt4-smallerprompt"]
     
     
@@ -60,6 +62,8 @@ def main(_A: argparse.Namespace):
                 )
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
+                    print(model_name)
+                    print(model)
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_winoground()
                     if _A.evaluation_type == "accuracy_score":
