@@ -123,7 +123,8 @@ class Winoground_generative_evaluation:
                  torch_type=None,
                  device=None,
                  prompt_name=None, 
-                 evaluation_type=None
+                 evaluation_type=None,
+                 no_hard_negatives=None,
                  ):
         self.model_name = model_name
         self.model = model
@@ -133,6 +134,7 @@ class Winoground_generative_evaluation:
         self.device = device
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
+        self.no_hard_negatives = no_hard_negatives
         # self.pretrained = pretrained
             
     def show_example(self, benchmark, idx):
@@ -159,7 +161,7 @@ class Winoground_generative_evaluation:
     def group_correct(self, result):
         return self.image_correct(result) and self.text_correct(result)
 
-
+    @torch.no_grad()
     def llava_image_to_caption(self, image, caption_0, caption_1):
         # prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
 
@@ -212,7 +214,7 @@ class Winoground_generative_evaluation:
         output = output.split('ASSISTANT:')[1]
         return output
 
-
+    @torch.no_grad()
     def llava_image_to_caption_binary_match(self, caption, image):
 
         if self.prompt_name == "gpt4":
@@ -253,7 +255,7 @@ class Winoground_generative_evaluation:
         output = output.split('ASSISTANT:')[1]
         return output    
 
-
+    @torch.no_grad()
     def BLIP2_image_to_caption_binary_match(self, caption, image):
 
         if self.prompt_name == "gpt4":
@@ -263,25 +265,30 @@ class Winoground_generative_evaluation:
             max_new_tokens = 35
 
 
-        if self.prompt_name == "gpt4-smallerprompt":
+        elif self.prompt_name == "gpt4-smallerprompt":
             prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
         
-        if self.prompt_name == "gpt4-evensmallerprompt":
+        elif self.prompt_name == "gpt4-evensmallerprompt":
             prompt = "Question: \n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
         
-        if self.prompt_name == "gpt4-evensmallerprompt2":
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            # prompt1 = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            # prompt1 += "Caption: " + caption.strip() + "\n"
+            # prompt1 += "Answer:"
             prompt = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Caption: " + caption + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
+            # print("prompt1", prompt1)
+            # print("prompt2", prompt2)
 
-        if self.prompt_name == "alignment":
+        elif self.prompt_name == "alignment":
             prompt = "Question: Does this image entail the description:" 
             prompt += caption.strip() + "?"
             prompt += "Answer:"
@@ -298,8 +305,58 @@ class Winoground_generative_evaluation:
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True)[0]
         # output = output.split('Answer:')[1]
         return output
-    
 
+    @torch.no_grad()
+    def BLIP2_v2_image_to_caption_binary_match(self, caption, image):
+
+        if self.prompt_name == "gpt4":
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+        
+        elif self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "Question: \n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+        
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            # prompt1 = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            # prompt1 += "Caption: " + caption.strip() + "\n"
+            # prompt1 += "Answer:"
+            prompt = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += "Caption: " + caption + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
+            # print("prompt1", prompt1)
+            # print("prompt2", prompt2)
+
+        elif self.prompt_name == "alignment":
+            prompt = "Question: Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+        ##icl arises form data
+        ##why BLIP2 fails? dataset
+
+        
+        image = self.processor["eval"](image).unsqueeze(0).to(device)      
+
+        # Generate
+        output = self.model.generate({"image": image, "prompt": prompt})
+        # output = output.split('Answer:')[1]
+        return output
+    
+    @torch.no_grad()
     def cogvlm_image_to_caption_binary_match(self, caption, image):
 
         if self.prompt_name == "gpt4":
@@ -357,10 +414,10 @@ class Winoground_generative_evaluation:
 
         ##images are all winoground images
         random.seed(2023)
-        subset_idx = random.sample(range(len(winoground)), 100)
+        subset_idx = random.sample(range(len(winoground)), 300)
         # len(subset_idx[:20])
         #taking the first 20 for time purposes
-        subset_idx = subset_idx[:200]
+        subset_idx = subset_idx[:100]
         if self.evaluation_type == "text_image_group_score":
             text_correct_count = 0
             image_correct_count = 0
@@ -370,17 +427,36 @@ class Winoground_generative_evaluation:
 
             for idx in tqdm(subset_idx):
                 image_0 = winoground[idx]["image_0"].convert("RGB")
-                image_1 = winoground[idx]["image_1"].convert("RGB")
+                # image_1 = winoground[idx]["image_1"].convert("RGB")
                 caption_0 = winoground[idx]["caption_0"]
-                caption_1 = winoground[idx]["caption_1"]
-
+                # print("caption_0", caption_0)
+                if self.no_hard_negatives:
+                    # print("using no Hard negatives")
+                    if idx+1 < len(winoground):
+                        print("idx+1", idx+1)
+                        image_1 = winoground[idx+1]["image_1"].convert("RGB")
+                        caption_1 = winoground[idx+1]["caption_1"]
+                        print("caption_1", caption_1)
+                    else:
+                        print("idx-1", idx-1)
+                        image_1 = winoground[idx-1]["image_1"].convert("RGB")
+                        caption_1 = winoground[idx-1]["caption_1"]
+                        print("caption_1", caption_1)
+                else:
+                    image_1 = winoground[idx]["image_1"].convert("RGB")
+                    caption_1 = winoground[idx]["caption_1"]
+                    print("caption_1", caption_1)
+                    
                 print ("Example: #", total)
-                self.show_example(benchmark=winoground, idx=idx)
+                # self.show_example(benchmark=winoground, idx=idx)
                 result = {}
                 # try:
                 ## map string results to nemurical
                 if self.model_name == "llava-hf/llava-1.5-7b-hf":
                     captioner = self.llava_image_to_caption_binary_match
+                
+                elif self.model_name == "blip2_t5":
+                    captioner = self.BLIP2_v2_image_to_caption_binary_match
 
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
                     captioner = self.BLIP2_image_to_caption_binary_match

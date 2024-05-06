@@ -9,6 +9,7 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import LlamaTokenizer, AutoModelForCausalLM
 import wandb
 import torch
+from lavis.models import load_model_and_preprocess
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -16,12 +17,14 @@ _AA = parser.add_argument
 
 _AA("--model_list", nargs='+', help="List of models to evaluate.")
 _AA("--evaluation_type", help="Evaluation mode to activate. Accuracy overall or text/image/group scores.")
-# _AA("--prompt_list", nargs='+', help="List of prompts to evaluate on.")
+_AA("--no_hard_negatives", help="Evaluation mode in which caption and image pairs are swapped with ones from different examples.")
+
 
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
 BENCHMARKS_LIST = ["winoground"]
+# BENCHMARKS_LIST = ["sugarcrepe"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
 
@@ -34,8 +37,8 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["gpt4-moretokens"]
         PROMPT_LIST = ["alignment"]
     if _A.evaluation_type == "text_image_group_score":
-        PROMPT_LIST = ["gpt4-evensmallerprompt"]
-        # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
+        # PROMPT_LIST = ["gpt4-evensmallerprompt"]
+        PROMPT_LIST = ["gpt4-evensmallerprompt2"]
         # PROMPT_LIST = ["alignment"]
         # PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
@@ -46,6 +49,9 @@ def main(_A: argparse.Namespace):
             model = LlavaForConditionalGeneration.from_pretrained(model_name).to(DEVICE).eval()
             processor = AutoProcessor.from_pretrained(model_name)
             tokenizer = None
+        elif model_name == "blip2_t5":
+            model, processor, _ = load_model_and_preprocess(name=model_name, model_type="pretrain_flant5xxl", is_eval=True, device=DEVICE)
+
         elif model_name == "Salesforce/blip2-opt-2.7b":            
             model = Blip2ForConditionalGeneration.from_pretrained(
                 model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
@@ -77,8 +83,9 @@ def main(_A: argparse.Namespace):
                 if benchmark == "winoground":
                     print(model_name)
                     # print(model)
-                    benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
+                    benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type, _A.no_hard_negatives)
                     eval_results = benchmark_module.evaluate_winoground()
+                    
                     if _A.evaluation_type == "accuracy_score":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy_score"]})
                     elif _A.evaluation_type == "text_image_group_score":
@@ -108,7 +115,8 @@ def main(_A: argparse.Namespace):
 
                 else:
                     raise ValueError(f"Unknown benchmark: {benchmark}")
-                
+
+            wandb.log({'no-hard-negatives': _A.no_hard_negatives})
             wandb.finish()
 
     print(eval_results)
