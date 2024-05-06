@@ -212,57 +212,6 @@ class Winoground_generative_evaluation:
         output = output.split('ASSISTANT:')[1]
         return output
 
-    def llava_caption_to_image(self, caption, image_0, image_1):
-        # prompt = "USER: <image>\nDescribe the image in one sentence. ASSISTANT:"
-
-        if self.prompt_name == "gpt4":
-            prompt = "USER: <image>\nGiven the caption and two candidate images, which image is the better match for the given caption? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "A. "
-            max_new_tokens = 15
-        
-        elif self.prompt_name == "gpt4-moretokens":
-            prompt = "USER:\n <image>\nGiven the image and two candidate captions, which caption is the better description of the given image? (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is A/B.\")\n"
-            prompt += "A. " + caption_0.strip() + "\n"
-            prompt += "B. " + caption_1.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
-            prompt += "A." + caption_0 + "\n"
-            prompt += "B." + caption_1 + "\n"  
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "choices-first":
-            prompt = "USER: <image>\n There are two choices:\n"
-            prompt += "A." + caption_0 + "\n"
-            prompt += "B." + caption_1 + "\n"  
-            prompt += "Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-        
-        elif self.prompt_name == "choices-first-numbers":
-            prompt = "USER: <image>\n There are two choices:\n"
-            prompt += "1." + caption_0 + "\n"
-            prompt += "2." + caption_1 + "\n"  
-            prompt += "Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is 1./2..\"\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        else:
-            max_new_tokens = 15
-
-        
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
-
-        # Generate
-        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        output = output.split('ASSISTANT:')[1]
-        return output
-
 
     def llava_image_to_caption_binary_match(self, caption, image):
 
