@@ -76,7 +76,7 @@ def main(_A: argparse.Namespace):
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
                     print(model_name)
-                    print(model)
+                    # print(model)
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_winoground()
                     if _A.evaluation_type == "accuracy_score":
