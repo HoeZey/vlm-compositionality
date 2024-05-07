@@ -23,8 +23,9 @@ _AA("--no_hard_negatives", help="Evaluation mode in which caption and image pair
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
-BENCHMARKS_LIST = ["winoground"]
+# BENCHMARKS_LIST = ["winoground"]
 # BENCHMARKS_LIST = ["sugarcrepe"]
+BENCHMARKS_LIST = ["aro"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
 
@@ -97,10 +98,10 @@ def main(_A: argparse.Namespace):
                 elif benchmark == "aro":
                     benchmark_module = ARO_generative_evaluation(model, processor, prompt_name)
                     eval_results = benchmark_module.evaluate_winoground_LLava()
-                    wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]['Accuracy']})
-                    wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']['Accuracy']})
-                    wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']['Accuracy']})
-                    wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies']['Flickr30k_Order'] ['Accuracy']})
+                    wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]})
+                    wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']})
+                    wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']})
+                    wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies']['Flickr30k_Order']})
                 
                 elif benchmark == "sugarcrepe":
                     benchmark_module = SugarCrepe_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
