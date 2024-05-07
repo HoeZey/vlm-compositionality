@@ -1,25 +1,12 @@
 import torch
 import open_clip
-# import open_flamingo 
 from PIL.Image import Image
-from open_clip import tokenizer
 from torch import FloatTensor
-from abc import ABC, abstractmethod
 from typing import Union
+from model_wrapper_abc import VLMWrapper
 
 
-class VLModelWrapper(ABC, torch.nn.Module):
-    '''
-    The forward function of VLModelWrapper should return FloatTensor
-    containing the logits per text, i.e. out: R^N_text
-    '''
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-
-class OpenClipWrapper(VLModelWrapper):
+class OpenClipWrapper(VLMWrapper):
     def __init__(self, backbone='ViT-B-32', pretrained='openai') -> None:
         super().__init__()
         
@@ -59,7 +46,7 @@ class OpenClipWrapper(VLModelWrapper):
         return 'clip'
 
 
-class OpenFlamingoWrapper(VLModelWrapper):
+class OpenFlamingoWrapper(VLMWrapper):
     def __init__(self) -> None:
         super().__init__()
         model, preprocess, tokenizer = open_flamingo.create_model_and_transforms(

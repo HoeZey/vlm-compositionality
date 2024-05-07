@@ -374,7 +374,6 @@ class Winoground_generative_evaluation:
         return output
 
     def evaluate_winoground(self):
-
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
 
@@ -431,13 +430,6 @@ class Winoground_generative_evaluation:
                 
                 else:
                     raise ValueError(f"Unknown model name: {self.model_name}")
-
-                # if self.contrastive:
-                #     c0_i0 = captioner(caption_0, image_0)
-                #     c0_i1 = captioner(caption_0, image_1)
-                #     c1_i0 = captioner(caption_1, image_0)
-                #     c1_i1 = captioner(caption_1, image_1)
-
                 
                 ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
