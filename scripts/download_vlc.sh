@@ -5,38 +5,38 @@
 # --------------------------------------------------------
 # TODO all drive links should have checksums
 
-# if [ ! -d data/hake ];then
-#     mkdir data/hake
-# fi
-# if [ ! -d data/hake/images ];then
-#     mkdir data/hake/images
-# fi
-# cd data/hake
+if [ ! -d data/hake ];then
+    mkdir datasets/hake
+fi
+if [ ! -d data/hake/images ];then
+    mkdir datasets/hake/images
+fi
+cd datasets/hake
 
-# # ---------------V-COCO Dataset--------------------
-# echo "Downloading V-COCO Dataset"
+# ---------------V-COCO Dataset--------------------
+echo "Downloading V-COCO Dataset"
 
-# URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
-# URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
-# #URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
+URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
+URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
+#URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
 
-# wget -N $URL_2017_Train_images
-# wget -N $URL_2017_Val_images
-# #wget -N $URL_2017_Test_images
+wget -q -N $URL_2017_Train_images
+wget -q -N $URL_2017_Val_images
+#wget -N $URL_2017_Test_images
 
-# if [ ! -d vcoco ];then
-#     mkdir vcoco
-# fi
+if [ ! -d vcoco ];then
+    mkdir vcoco
+fi
 
-# echo "Unzipping train zip"
-# unzip -q train2017.zip -d vcoco/
-# echo "Unzipping eval zip"
-# unzip -q val2017.zip -d vcoco/
-# #unzip test2017.zip -d vcoco/
+echo "Unzipping train zip"
+unzip -q train2017.zip -d vcoco/
+echo "Unzipping eval zip"
+unzip -q val2017.zip -d vcoco/
+#unzip test2017.zip -d vcoco/
 
-# rm train2017.zip
-# rm val2017.zip
-# #rm test2017.zip
+rm train2017.zip
+rm val2017.zip
+#rm test2017.zip
 
 # echo "V-COCO Dataset Downloaded!\n"
 
