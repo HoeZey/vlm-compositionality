@@ -106,6 +106,7 @@ class ARO_generative_evaluation:
     """
     This class is used to evaluate the Generative models on the ARO datasets
     """
+
     def __init__(self, 
                  model_name, 
                  model, 
@@ -209,7 +210,7 @@ class ARO_generative_evaluation:
 
 
     @torch.no_grad()
-    def blip2_caption_choice(self, image, caption_0, caption_1):
+    def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe
         if self.prompt_name == "gpt4-shorterprompt":
             prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
             prompt += "A. " + caption_0 + "\n"
@@ -230,7 +231,7 @@ class ARO_generative_evaluation:
 
     @torch.no_grad()
     # def cogvlm_caption_choice(self, image, caption_0, caption_1):
-    def cogvlm_caption_choice(self, caption, image):
+    def cogvlm_caption_choice(self, caption, image): #combination of both sugarcrepe + winoground
 
         if self.prompt_name == "gpt4-shorterprompt":
             prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
@@ -316,16 +317,26 @@ class ARO_generative_evaluation:
             #batch
             joint_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn) 
 
-            # scores = self.model.get_retrieval_scores_batched(joint_loader)
-            # result_records = dataset.evaluate_scores(scores)
-            # df = pd.DataFrame(result_records)
+            correct_cnt = 0
+            idx_limit = 20
+            iter_cnt = 0
 
-            # mean_acc = df['Accuracy'].mean()
+            for batch in joint_loader:
+                image_options = batch['image_options']
+                caption_options = batch['caption_options']
 
-            # results[dataset_name] = {
-            #     # "Model": self.model_name,
-            #     "Accuracy": mean_acc,
-            #     "Seed": seed
-            # }   
-        print(joint_loader)
-        # return {"ARO_accuracies": results}
+                for img_tensor, captions in zip(image_options, caption_options):
+                    answer = captioner(img_tensor, captions)
+                    if answer[0].lower() == 'a':
+                        correct = 1
+                    correct_cnt += correct
+                    iter_cnt += 1
+                    if iter_cnt >= idx_limit:
+                        break
+            
+            count = idx_limit
+            accuracy = correct_cnt / count 
+            metrics[dataset_name] = accuracy
+
+        print(metrics)
+        return {"ARO_accuracies": metrics}
