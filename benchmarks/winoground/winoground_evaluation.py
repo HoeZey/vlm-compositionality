@@ -84,11 +84,13 @@ class Winoground_evaluation:
                 text0_features /= text0_features.norm(dim=-1, keepdim=True)
                 text1_features = model.encode_text(text1)
                 text1_features /= text1_features.norm(dim=-1, keepdim=True)
+                
 
                 c0_i0 = (100.0 * image0_features @ text0_features.T)
                 c0_i1 = (100.0 * image1_features @ text0_features.T)
                 c1_i0 = (100.0 * image0_features @ text1_features.T)
                 c1_i1 = (100.0 * image1_features @ text1_features.T)
+
 
 
             winoground_clip_scores.append({"id" : example["id"], "c0_i0": c0_i0, "c0_i1": c0_i1, "c1_i0": c1_i0, "c1_i1": c1_i1})
@@ -300,59 +302,26 @@ class Winoground_generative_evaluation:
         # self.model.to(device)
         inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
+        # # get the logits
+        # if self.contrastive:
+        outs = self.model(**inputs)
+        
+        # print("outs.logits shape", outs.logits.shape)
+        logits = outs.logits
+        logits = logits.squeeze()
+        logits = logits.mean()
+
+        print("mean logits", logits)
+
+
+        # return outs.logits
+        
+        
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True)[0]
-        # output = output.split('Answer:')[1]
-        return output
-
-    @torch.no_grad()
-    def BLIP2_v2_image_to_caption_binary_match(self, caption, image):
-
-        if self.prompt_name == "gpt4":
-            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
-            prompt += caption.strip() + "\n"
-            prompt += "Answer:"
-            max_new_tokens = 35
-
-
-        elif self.prompt_name == "gpt4-smallerprompt":
-            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "Answer:"
-            max_new_tokens = 35
-        
-        elif self.prompt_name == "gpt4-evensmallerprompt":
-            prompt = "Question: \n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "Answer:"
-            max_new_tokens = 35
-        
-        elif self.prompt_name == "gpt4-evensmallerprompt2":
-            # prompt1 = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            # prompt1 += "Caption: " + caption.strip() + "\n"
-            # prompt1 += "Answer:"
-            prompt = "Question: \n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption + "\n"
-            prompt += "Answer:"
-            max_new_tokens = 35
-            # print("prompt1", prompt1)
-            # print("prompt2", prompt2)
-
-        elif self.prompt_name == "alignment":
-            prompt = "Question: Does this image entail the description:" 
-            prompt += caption.strip() + "?"
-            prompt += "Answer:"
-            max_new_tokens = 35
-
-        ##icl arises form data
-        ##why BLIP2 fails? dataset
-
-        
-        image = self.processor["eval"](image).unsqueeze(0).to(device)      
-
-        # Generate
-        output = self.model.generate({"image": image, "prompt": prompt})
+        # print("generate_ids.logits", generate_ids.logits)
+        output = self.processor.decode(generate_ids[0], skip_special_tokens=True)
+        # print("output.logits", output.logits)
         # output = output.split('Answer:')[1]
         return output
     
@@ -403,7 +372,6 @@ class Winoground_generative_evaluation:
 
         output = output.split("</s>")[0]
         return output
-    
 
     def evaluate_winoground(self):
 
@@ -429,7 +397,7 @@ class Winoground_generative_evaluation:
                 image_0 = winoground[idx]["image_0"].convert("RGB")
                 # image_1 = winoground[idx]["image_1"].convert("RGB")
                 caption_0 = winoground[idx]["caption_0"]
-                # print("caption_0", caption_0)
+                print("caption_0", caption_0)
                 if self.no_hard_negatives:
                     # print("using no Hard negatives")
                     if idx+1 < len(winoground):
@@ -454,9 +422,6 @@ class Winoground_generative_evaluation:
                 ## map string results to nemurical
                 if self.model_name == "llava-hf/llava-1.5-7b-hf":
                     captioner = self.llava_image_to_caption_binary_match
-                
-                elif self.model_name == "blip2_t5":
-                    captioner = self.BLIP2_v2_image_to_caption_binary_match
 
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
                     captioner = self.BLIP2_image_to_caption_binary_match
@@ -467,6 +432,13 @@ class Winoground_generative_evaluation:
                 else:
                     raise ValueError(f"Unknown model name: {self.model_name}")
 
+                # if self.contrastive:
+                #     c0_i0 = captioner(caption_0, image_0)
+                #     c0_i1 = captioner(caption_0, image_1)
+                #     c1_i0 = captioner(caption_1, image_0)
+                #     c1_i1 = captioner(caption_1, image_1)
+
+                
                 ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
@@ -508,9 +480,7 @@ class Winoground_generative_evaluation:
                 total += 1
                 print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
 
-                # except:
-                #     print ("skipped")
-                #     continue
+
         
         return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
         
