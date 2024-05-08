@@ -9,7 +9,6 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import LlamaTokenizer, AutoModelForCausalLM
 import wandb
 import torch
-from lavis.models import load_model_and_preprocess
 
 
 parser = argparse.ArgumentParser(description=__doc__)
