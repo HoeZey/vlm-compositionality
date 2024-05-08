@@ -305,13 +305,27 @@ class Winoground_generative_evaluation:
         # # get the logits
         # if self.contrastive:
         outs = self.model(**inputs)
-        
-        # print("outs.logits shape", outs.logits.shape)
         logits = outs.logits
-        logits = logits.squeeze()
-        logits = logits.mean()
+        vision_out = outs.vision_outputs
+        text_out = outs.qformer_outputs
+        lm_outs = outs.language_model_outputs
 
-        print("mean logits", logits)
+        # print("outs.language_model_outputs", outs.language_model_outputs)
+        # print("outs.language_model_outputs shape", outs.language_model_outputs.shape)
+
+
+        # print("vision_out last hidden", vision_out.last_hidden_state)
+        # print("-"*10)
+        # print("text_out last hidden", text_out.last_hidden_state)
+
+        # print("vision_out shape", vision_out.last_hidden_state.shape)
+        # print("text_out shape", text_out.last_hidden_state.shape)
+        # print("outs.logits shape", outs.logits.shape)
+        # print()
+        # logits = logits.squeeze()
+        # logits = logits.mean()
+
+        # print("mean logits", logits) 
 
 
         # return outs.logits

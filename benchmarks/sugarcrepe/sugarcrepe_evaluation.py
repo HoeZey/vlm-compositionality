@@ -142,7 +142,7 @@ class SugarCrepe_generative_evaluation:
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt = "USER: \n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
             prompt += "A. " + caption_0 + "\n"
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
