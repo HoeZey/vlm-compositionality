@@ -95,8 +95,8 @@ def main(_A: argparse.Namespace):
                         wandb.log({'Winoground_group_score' : eval_results['group_score']})
 
                 elif benchmark == "aro":
-                    benchmark_module = ARO_generative_evaluation(model, processor, prompt_name)
-                    eval_results = benchmark_module.evaluate_winoground_LLava()
+                    benchmark_module = ARO_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
+                    eval_results = benchmark_module.evaluate_aro()
                     wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]})
                     wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']})
                     wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']})
@@ -116,7 +116,7 @@ def main(_A: argparse.Namespace):
                 else:
                     raise ValueError(f"Unknown benchmark: {benchmark}")
 
-            wandb.log({'no-hard-negatives': _A.no_hard_negatives})
+            # wandb.log({'no-hard-negatives': _A.no_hard_negatives})
             wandb.finish()
 
     print(eval_results)
