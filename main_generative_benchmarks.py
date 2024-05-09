@@ -35,7 +35,8 @@ def main(_A: argparse.Namespace):
     if _A.evaluation_type == "accuracy_score":
         # PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
         # PROMPT_LIST = ["gpt4-moretokens"]
-        PROMPT_LIST = ["alignment"]
+        # PROMPT_LIST = ["alignment"]
+        PROMPT_LIST = ['gpt4-shorterprompt']
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
         PROMPT_LIST = ["gpt4-evensmallerprompt2"]
@@ -49,6 +50,8 @@ def main(_A: argparse.Namespace):
             model = LlavaForConditionalGeneration.from_pretrained(model_name).to(DEVICE).eval()
             processor = AutoProcessor.from_pretrained(model_name)
             tokenizer = None
+            # print(f"Processor type: {type(processor)}")
+            # print(f"Processor details: {processor}")
         elif model_name == "blip2_t5":
             model, processor, _ = load_model_and_preprocess(name=model_name, model_type="pretrain_flant5xxl", is_eval=True, device=DEVICE)
 

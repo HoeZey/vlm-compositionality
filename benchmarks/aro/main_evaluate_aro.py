@@ -3,12 +3,13 @@ sys.path.append("..")
 
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, default_collate
 import pandas as pd
 import torch
 
 from torch.utils.data import DataLoader
 import open_clip
+from torchvision import transforms
 
 from benchmarks.aro.misc import seed_all, _default_collate
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
@@ -220,8 +221,13 @@ class ARO_generative_evaluation:
         else:
             print("Prompt type not supported!")
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        prompts = [prompt] * image.size(0)
 
+        inputs = self.processor(text=prompts, images=image, return_tensors="pt").to(self.device)
+
+        # print("Number of prompts:", len(prompts))
+        # print("Text input shape:", inputs['input_ids'].shape)
+        # print("Image input shape:", inputs['pixel_values'].shape)
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
@@ -230,38 +236,11 @@ class ARO_generative_evaluation:
 
 
     @torch.no_grad()
-    # def cogvlm_caption_choice(self, image, caption_0, caption_1):
-    def cogvlm_caption_choice(self, caption, image): #combination of both sugarcrepe + winoground
-
+    def cogvlm_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
             prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            # prompt += "A. " + caption_0 + "\n"
-            # prompt += "B. " + caption_1 + "\n"  
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4":
-            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4-smallerprompt":
-            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is either Yes or No\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4-evensmallerprompt":
-            prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the exact format of: 'Yes' or 'No'\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4-evensmallerprompt2":
-            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
         else:
@@ -289,6 +268,16 @@ class ARO_generative_evaluation:
         output = output.split("</s>")[0]
         return output
 
+    def image_preprocess(self,image):
+        # Check if the image is already a tensor
+        if not isinstance(image, torch.Tensor):
+            # Convert PIL Image or ndarray to tensor
+            image = transforms.functional.to_tensor(image)
+
+        # Normalize the image tensor
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        return normalize(image)
+    
 
     def evaluate_aro(self):
         seed = 1
@@ -297,7 +286,7 @@ class ARO_generative_evaluation:
         dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
         download = True
         batch_size = 32
-        num_workers = 4
+        num_workers = 0 #chnage this to 4 when finished debugging
         
         metrics = {}
 
@@ -325,15 +314,36 @@ class ARO_generative_evaluation:
                 image_options = batch['image_options']
                 caption_options = batch['caption_options']
 
-                for img_tensor, captions in zip(image_options, caption_options):
-                    answer = captioner(img_tensor, captions)
-                    if answer[0].lower() == 'a':
-                        correct = 1
-                    correct_cnt += correct
-                    iter_cnt += 1
-                    if iter_cnt >= idx_limit:
-                        break
-            
+                # Debugging: Check batch content sizes
+                # print(f"Debug: Processing batch with {len(image_options)} images and {len(caption_options)} caption pairs.")
+
+                # Zip the image_options with caption_options
+                for img_feature, captions in zip(image_options, caption_options):
+                    # img_feature is a BatchFeature object containing the 'pixel_values' key
+                    # Accessing the tensor(s) from the BatchFeature
+                    # Assuming there is always at least one image per feature , accessing  the first
+                    if img_feature['pixel_values']:  # Check if there are any pixel values
+                        img_tensor = img_feature['pixel_values'][0]
+
+                        if img_tensor.min() < 0 or img_tensor.max() > 1:
+                            # print("Image tensor values are outside the expected range [0, 1].")
+                            # image_tensor = self.image_preprocess(img_tensor)
+                            # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                            img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
+                        
+                        # print(f"Debug: Captions {captions}")
+                        # print("Shape of img_tensor before passing to model:", img_tensor.shape)
+                        answer = captioner(img_tensor, captions[0], captions[1])
+                        if answer[0].lower() == 'a':
+                            correct = 1
+                        else:
+                            correct = 0
+                        correct_cnt += correct
+
+                iter_cnt += 1
+                if iter_cnt >= idx_limit:
+                    break
+                
             count = idx_limit
             accuracy = correct_cnt / count 
             metrics[dataset_name] = accuracy
