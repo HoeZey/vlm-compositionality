@@ -9,6 +9,7 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import LlamaTokenizer, AutoModelForCausalLM
 import wandb
 import torch
+from torchvision import transforms as T
 
 
 parser = argparse.ArgumentParser(description=__doc__)

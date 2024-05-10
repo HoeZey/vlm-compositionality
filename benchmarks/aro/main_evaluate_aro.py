@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader, default_collate
 import pandas as pd
 import torch
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 import open_clip
@@ -175,7 +176,7 @@ class ARO_generative_evaluation:
             max_new_tokens = 35
 
         elif self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is A/B.\"\n"
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
             prompt += "A." + caption_0 + "\n"
             prompt += "B." + caption_1 + "\n"  
             prompt += "ASSISTANT:"
@@ -285,7 +286,7 @@ class ARO_generative_evaluation:
 
         dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
         download = True
-        batch_size = 32
+        batch_size = 1
         num_workers = 0 #chnage this to 4 when finished debugging
         
         metrics = {}
@@ -298,50 +299,52 @@ class ARO_generative_evaluation:
             captioner = self.cogvlm_caption_choice
 
         for dataset_name in dataset_names:
-            dataset = self.load_dataset(dataset_name, image_preprocess=self.processor, download=download)
+            dataset = self.load_dataset(dataset_name, download=download)
             
             # For some models we just pass the PIL images, so we'll need to handle them in the collate_fn. 
             collate_fn = _default_collate if self.processor is None else None
             
             #batch
-            joint_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn) 
+            # joint_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn)
 
             correct_cnt = 0
             idx_limit = 20
             iter_cnt = 0
 
-            for batch in joint_loader:
-                image_options = batch['image_options']
-                caption_options = batch['caption_options']
+            for example in tqdm(dataset):
+                image_options = example['image_options']
+                caption_options = example['caption_options']
 
                 # Debugging: Check batch content sizes
                 # print(f"Debug: Processing batch with {len(image_options)} images and {len(caption_options)} caption pairs.")
 
                 # Zip the image_options with caption_options
-                for img_feature, captions in zip(image_options, caption_options):
+                # for img_feature, captions in zip(image_options, caption_options):
                     # img_feature is a BatchFeature object containing the 'pixel_values' key
                     # Accessing the tensor(s) from the BatchFeature
-                    # Assuming there is always at least one image per feature , accessing  the first
-                    if img_feature['pixel_values']:  # Check if there are any pixel values
-                        img_tensor = img_feature['pixel_values'][0]
+                    # # Assuming there is always at least one image per feature , accessing  the first
+                    # if img_feature['pixel_values']:  # Check if there are any pixel values
+                    #     img_tensor = img_feature['pixel_values'][0]
 
-                        if img_tensor.min() < 0 or img_tensor.max() > 1:
-                            # print("Image tensor values are outside the expected range [0, 1].")
-                            # image_tensor = self.image_preprocess(img_tensor)
-                            # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                            img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
+                    #     if img_tensor.min() < 0 or img_tensor.max() > 1:
+                    #         # print("Image tensor values are outside the expected range [0, 1].")
+                    #         # image_tensor = self.image_preprocess(img_tensor)
+                    #         # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                    #         img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
                         
                         # print(f"Debug: Captions {captions}")
                         # print("Shape of img_tensor before passing to model:", img_tensor.shape)
-                        answer = captioner(img_tensor, captions[0], captions[1])
-                        if answer[0].lower() == 'a':
-                            correct = 1
-                        else:
-                            correct = 0
-                        correct_cnt += correct
+                print("CAPTIONS!!, ", caption_options[0], caption_options[1])
+                answer = captioner(image_options[0], caption_options[0], caption_options[1])
+                if answer[0].lower() == 'a':
+                    correct = 1
+                else:
+                    correct = 0
+                correct_cnt += correct
 
                 iter_cnt += 1
                 if iter_cnt >= idx_limit:
+                    iter_cnt = 0
                     break
                 
             count = idx_limit
