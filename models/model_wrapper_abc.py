@@ -11,7 +11,7 @@ class VLMWrapper(ABC, torch.nn.Module):
     containing the logits per text, i.e. out: R^N_text
     '''
     @abstractmethod
-    def predict(imgs: list[Union[Image, torch.Tensor]], texts: list[str]) -> FloatTensor:
+    def predict(imgs: list[Union[Image, torch.Tensor]], texts: list[str]) -> Union[FloatTensor, float]:
         pass
 
     @property

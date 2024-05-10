@@ -55,12 +55,13 @@ class WinoGroundWrapper:
         text_correct_count = 0
         image_correct_count = 0
         group_correct_count = 0
+        
         for result in scores:
             text_correct_count += 1 if text_correct(result) else 0
             image_correct_count += 1 if image_correct(result) else 0
             group_correct_count += 1 if group_correct(result) else 0
 
-            denominator = len(scores)
+        denominator = len(scores)
         
         return {
             'text_score': text_correct_count/denominator, 

@@ -304,19 +304,17 @@ class Winoground_generative_evaluation:
 
         # # get the logits
         # if self.contrastive:
-        outs = self.model(**inputs)
+        # outs = self.model(**inputs)
         
         # print("outs.logits shape", outs.logits.shape)
-        logits = outs.logits
-        logits = logits.squeeze()
-        logits = logits.mean()
+        # logits = outs.logits
+        # logits = logits.squeeze()
+        # logits = logits.mean()
 
-        print("mean logits", logits)
+        # print("mean logits", logits)
 
-
-        # return outs.logits
-        
-        
+        # return outs.logits    
+    
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         # print("generate_ids.logits", generate_ids.logits)
