@@ -1,72 +1,77 @@
 import torch
 import open_flamingo
 # from PIL.Image import Image
-# from torch import FloatTensor
+from torch import FloatTensor
 # from typing import Union
 from dataclasses import dataclass
 from models.model_wrapper_abc import VLMWrapper
 from transformers import LlamaTokenizer, AutoModelForCausalLM
-
-
-@dataclass
-class Prompt:
-    question_prompt: str
-    answer_prompt: str
-    positive_answer:str
-
-    def insert_caption(self, caption: str) -> str:
-        return f'{self.question_prompt}{caption}{self.answer_prompt}'
-    
-    def answered_positive(self, out: str) -> float:
-        return self.positive_answer in out.lower()
-
+from prompts.prompt import Prompt
 
 class OpenFlamingoWrapper(VLMWrapper):
-    def __init__(self, 
-            prompt: Prompt,
-            vis_encoder='ViT-L-14', 
-            vis_pretrained='openai', 
-            lang_encoder='anas-awadalla/mpt-1b-redpajama-200b', 
-            tokenizer='anas-awadalla/mpt-1b-redpajama-200b',
-            xattn_interval=1
-        ) -> None:
+    def __init__(self) -> None:
         super().__init__()
         model, preprocess, tokenizer = open_flamingo.create_model_and_transforms(
-            clip_vision_encoder_path=vis_encoder,
-            clip_vision_encoder_pretrained=vis_pretrained,
-            lang_encoder_path=lang_encoder,
-            tokenizer_path=tokenizer,
-            cross_attn_every_n_layers=xattn_interval,
+            clip_vision_encoder_path="ViT-L-14",
+            clip_vision_encoder_pretrained="openai",
+            lang_encoder_path="anas-awadalla/mpt-1b-redpajama-200b",
+            tokenizer_path="anas-awadalla/mpt-1b-redpajama-200b",
+            cross_attn_every_n_layers=1,
         )
         self.model = model
         self.preprocess = preprocess
         self.tokenizer = tokenizer
         self.tokenizer.padding_side = 'left' 
+
+    def _generate_text(self, imgs, captions) -> list[str]:
+        img_outputs = []
+        for img in imgs:
+            for caption in captions:
+                img_proc = self.preprocess(img).unsqueeze(0).unsqueeze(1).unsqueeze(0)
+                prompt = self.tokenizer([self.prompt.insert_caption(caption)], return_tensors='pt')
+                out = self.model.generate(
+                    vision_x=img_proc,
+                    lang_x=prompt['input_ids'],
+                    attention_mask=prompt['attention_mask'],
+                    max_new_tokens=1,
+                    num_beams=3,
+                    pad_token_id=self.tokenizer.eos_token_id
+                )
+                img_outputs.append(self.tokenizer.decode(out[0]))
+        return img_outputs
+
+    def predict(self, imgs, texts) -> FloatTensor:
+        out = self._generate_text(imgs, texts)
+        answers = [self.prompt.answered_positive(o) for o in out]
+        print(answers)
+        return torch.tensor(answers).float().view(len(imgs), len(texts)).squeeze()
+    
+    def set_prompt(self, prompt):
         self.prompt = prompt
 
-    def _generate_text(self, imgs, texts) -> tuple[list[int], list[str]]:
-        imgs_proc = torch.cat([self.preprocess(img).unsqueeze(0) for img in imgs], dim=0).unsqueeze(1).unsqueeze(0)
-        texts_proc = self.tokenizer([self.prompt.insert_caption(t) for t in texts], return_tensors='pt')
-
-        print(imgs_proc)
-        print(texts_proc)
-
-        out = self.model.generate(
-            vision_x=imgs_proc,
-            lang_x=texts_proc['input_ids'],
-            attention_mask=texts_proc['attention_mask'],
-            max_new_tokens=20,
-            # num_beams=1,
-        )
-        return self.tokenizer.decode(out)
-
-    def predict(self, imgs, texts) -> float:
-        out = self._generate_text(imgs, texts)
-        return 1.0 if self.prompt.answered_positive(out) else 0.0
-    
     @property
     def name(self) -> str:
         return 'flamingo'
+
+    @property
+    def is_contrastive(self) -> str:
+        return False
+
+
+class BLIP2(VLMWrapper):
+    def __init__(self):
+        self.model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16).to(device)
+        self.processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
+    
+    def predict(self, images, captions, prompt: Prompt):
+        inputs = self.processor(images=images, text=texts, return_tensors='pt').to(device, torch.float16)
+        out = self.model(**inputs)
+        return 1.0 if prompt.answered_positive(out) else 0.0
+
+    @property
+    def is_contrastive(self) -> str:
+        return False
+
 
 class CogVLMWrapper(VLMWrapper):
     def __init__(self, 
@@ -113,5 +118,9 @@ class CogVLMWrapper(VLMWrapper):
     @property
     def name(self) -> str:
         return 'cogvlm'
+
+    @property
+    def is_contrastive(self) -> str:
+        return False
 
     

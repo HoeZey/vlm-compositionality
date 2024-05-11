@@ -39,12 +39,12 @@ class WinoGroundWrapper:
         scores = []
         for d_i in tqdm(self.data):
             imgs = [d_i['image_0'], d_i['image_1']]
-            texts = [d_i['caption_0'], d_i['caption_1']]
+            captions = [d_i['caption_0'], d_i['caption_1']]
 
             with torch.no_grad(), torch.cuda.amp.autocast():
-                out = model.predict(imgs, texts)
-                out_i0_t0, out_i0_t1 = out.argmax(dim=0).flatten()
-                out_i1_t0, out_i1_t1 = out.argmax(dim=1).flatten()
+                    out = model.predict(imgs, captions)
+                    out_i0_t0, out_i0_t1 = out.argmax(dim=0).flatten()
+                    out_i1_t0, out_i1_t1 = out.argmax(dim=1).flatten()
             
             scores.append({
                 'id': d_i['id'], 
@@ -72,6 +72,7 @@ class WinoGroundWrapper:
     @property
     def name(self) -> str:
         return 'winoground'
+
 
 
 class VLCheckListWrapper:

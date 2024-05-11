@@ -17,8 +17,7 @@ class Winoground_evaluation:
     def __init__(self, model_name, pretrained):
         self.model_name = model_name
         self.pretrained = pretrained
-
-        
+   
     def text_correct(self, result):
         return result["c0_i0"] > result["c1_i0"] and result["c1_i1"] > result["c0_i1"]
 
@@ -27,7 +26,6 @@ class Winoground_evaluation:
 
     def group_correct(self, result):
         return self.image_correct(result) and self.text_correct(result)
-
 
     def evaluate_open_clip_on_winoground(self):
         """ 
@@ -470,80 +468,4 @@ class Winoground_generative_evaluation:
                 total += 1
                 print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
 
-
-        
         return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
-        
-        # if self.evaluation_type == "accuracy_score":
-        #     correct = 0
-        #     total = 0
-        #     image_to_caption_results = {} ## for saving results
-
-        #     for idx in tqdm(subset_idx):
-        #         image_0 = winoground[idx]["image_0"]
-        #         image_1 = winoground[idx]["image_1"]
-        #         caption_0 = winoground[idx]["caption_0"]
-        #         caption_1 = winoground[idx]["caption_1"]
-        #         correct_a = False
-        #         correct_b = False
-
-        #         print ("Example: #", total)
-                
-        #         self.show_example(benchmark=winoground, idx=idx)
-
-        #         # try:
-        #         #     ## match caption for image_0
-        #         #     answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
-        #         #     image_to_caption_results[str(idx)+"_image_0"] = answer_0
-        #         #     print ("\nUsing image_0 to select the better caption: ")
-        #         #     print (answer_0)
-        #         #     if "answer is a" in answer_0.lower():
-        #         #         correct_a = True
-        #         #     print ("\n")
-
-        #         #     ## match caption for image_1
-        #         #     answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
-        #         #     image_to_caption_results[str(idx)+"_image_1"] = answer_1
-        #         #     print ("\nUsing image_1 to select the better caption: ")
-        #         #     print (answer_1)
-        #         #     if "answer is b" in answer_1.lower():
-        #         #         correct_b = True
-
-        #         #     ## the example is counted correct only if both matching are correct
-        #         #     if correct_a and correct_b:
-        #         #         correct += 1
-        #         #     total += 1
-
-        #         #     print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
-
-            
-        #         ## match caption for image_0
-        #         answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
-        #         image_to_caption_results[str(idx)+"_image_0"] = answer_0
-        #         print ("\nUsing image_0 to select the better caption: ")
-        #         print(answer_0)
-        #         print(answer_0[:4])
-        #         if "A." in answer_0[:4]:
-        #             correct_a = True
-        #         print ("\n")
-
-        #         ## match caption for image_1
-        #         answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
-        #         image_to_caption_results[str(idx)+"_image_1"] = answer_1
-        #         print("\nUsing image_1 to select the better caption: ")
-        #         print(answer_1)
-        #         print(answer_1[:4])
-        #         if "B." in answer_1[:4]:
-        #             correct_b = True
-
-        #         ## the example is counted correct only if both matching are correct
-        #         if correct_a and correct_b:
-        #             correct += 1
-        #         total += 1
-
-        #         print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
-        
-        #     return {"accuracy_score": correct / total}
-        
-        # else:
-        #     raise ValueError(f"Unknown evaluation type: {self.evaluation_type}")

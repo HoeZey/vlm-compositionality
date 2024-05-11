@@ -1,20 +1,40 @@
 import sys
 import os
 sys.path.append(os.getcwd())
+import json
+import warnings
+warnings.filterwarnings("ignore")
 from models.generative_model_wrappers import *
+from prompts.prompt import Prompt
 from benchmarks.benchmark_wrappers import instantiate_benchmarks
 from collections import defaultdict
 
-
-if __name__ == '__main__':
-    prompt = Prompt('Hello', 'Answer:', 'yes')
-    models = [CogVLMWrapper(prompt=prompt)]
+def main() -> None:
+    with open('./prompts/prompts.json', 'r') as f:
+        prompt_dict = Prompt.get_prompts_from_dict(json.load(f))
+    
+    models = [OpenFlamingoWrapper()]
     benchmarks = instantiate_benchmarks()
 
     results = defaultdict(dict)
     for model in models:
-        for benchmark in benchmarks:
-            result = benchmark.evaluate(model)
-            results[model.name][benchmark.name] = result
-            print(f'{model.name:<5} {benchmark.name:<13} {result}')
+        for prompt_type, prompt in prompt_dict.items():
+            # wandb.init(
+            #     project="generative_models",
+            #     entity="fomo-vlm-comp",
+            #     config={
+            #         "model": model.name,
+            #         "prompt": prompt_type
+            #         }
+            # )
+            for benchmark in benchmarks:
+                print(f'{model.name}\t{prompt_type}\t{benchmark.name}')
+                model.set_prompt(prompt)
+                result = benchmark.evaluate(model)
+                results[model.name][benchmark.name] = result
+                print(f'{model.name:<5} {benchmark.name:<13} {result}')
+                break
     # print(results)
+
+if __name__ == '__main__':
+    main()

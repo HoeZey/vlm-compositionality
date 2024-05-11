@@ -9,7 +9,7 @@ dependencies:
       - numpy==1.25.2
       - pytest==7.4.0
       - tqdm==4.66.1
-      - torch==2.1.2
+      - torch==2.0.1
       - pathlib==1.0.1
       - datasets
       - huggingface_hub[torch, cli]
@@ -24,3 +24,14 @@ dependencies:
       - accelerate
       - bitsandbytes
       - xformers
+      # - salesforce-lavis
+      # - scipy
+      - torchvision==0.15.2
+      # - nltk
+      # - inflection
+      # - pycocoevalcap
+      # - pycocotools
+      # - scikit-learn
+      # - black
+      # - mypy
+      # - pylint
