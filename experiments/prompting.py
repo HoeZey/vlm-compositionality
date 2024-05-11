@@ -34,7 +34,7 @@ def main() -> None:
                 results[model.name][benchmark.name] = result
                 print(f'{model.name:<5} {benchmark.name:<13} {result}')
                 break
-    # print(results)
+    print(results)
 
 if __name__ == '__main__':
     main()

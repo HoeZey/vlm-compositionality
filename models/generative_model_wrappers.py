@@ -33,7 +33,7 @@ class OpenFlamingoWrapper(VLMWrapper):
                     vision_x=img_proc,
                     lang_x=prompt['input_ids'],
                     attention_mask=prompt['attention_mask'],
-                    max_new_tokens=1,
+                    max_new_tokens=self.prompt.max_new_tokens,
                     num_beams=3,
                     pad_token_id=self.tokenizer.eos_token_id
                 )
