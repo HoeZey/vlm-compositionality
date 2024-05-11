@@ -41,7 +41,7 @@ class WinoGroundWrapper:
             imgs = [d_i['image_0'], d_i['image_1']]
             captions = [d_i['caption_0'], d_i['caption_1']]
 
-            with torch.no_grad(), torch.cuda.amp.autocast():
+            with torch.no_grad():
                     out = model.predict(imgs, captions)
                     out_i0_t0, out_i0_t1 = out.argmax(dim=0).flatten()
                     out_i1_t0, out_i1_t1 = out.argmax(dim=1).flatten()

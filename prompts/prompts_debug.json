@@ -1,0 +1,6 @@
+{
+    "regular": {
+        "prompt": "USER: <image> Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"). Caption: <caption>. ASSISTANT:",
+        "pos_ans": "yes"
+    }
+}

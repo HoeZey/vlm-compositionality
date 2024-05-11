@@ -9,7 +9,7 @@ from transformers import LlamaTokenizer, AutoModelForCausalLM
 from prompts.prompt import Prompt
 
 class OpenFlamingoWrapper(VLMWrapper):
-    def __init__(self) -> None:
+    def __init__(self, device) -> None:
         super().__init__()
         model, preprocess, tokenizer = open_flamingo.create_model_and_transforms(
             clip_vision_encoder_path="ViT-L-14",
@@ -18,7 +18,8 @@ class OpenFlamingoWrapper(VLMWrapper):
             tokenizer_path="anas-awadalla/mpt-1b-redpajama-200b",
             cross_attn_every_n_layers=1,
         )
-        self.model = model
+        self.device = device
+        self.model = model.to(device)
         self.preprocess = preprocess
         self.tokenizer = tokenizer
         self.tokenizer.padding_side = 'left' 
@@ -27,12 +28,12 @@ class OpenFlamingoWrapper(VLMWrapper):
         img_outputs = []
         for img in imgs:
             for caption in captions:
-                img_proc = self.preprocess(img).unsqueeze(0).unsqueeze(1).unsqueeze(0)
+                img_proc = self.preprocess(img).unsqueeze(0).unsqueeze(1).unsqueeze(0).to(self.device)
                 prompt = self.tokenizer([self.prompt.insert_caption(caption)], return_tensors='pt')
                 out = self.model.generate(
                     vision_x=img_proc,
-                    lang_x=prompt['input_ids'],
-                    attention_mask=prompt['attention_mask'],
+                    lang_x=prompt['input_ids'].to(self.device),
+                    attention_mask=prompt['attention_mask'].to(self.device),
                     max_new_tokens=1,
                     num_beams=3,
                     pad_token_id=self.tokenizer.eos_token_id
