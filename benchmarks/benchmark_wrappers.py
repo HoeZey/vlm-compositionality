@@ -37,14 +37,17 @@ class WinoGroundWrapper:
         - group_score is the accuracy of the model if both previous pairings are correct
         '''
         scores = []
-        for d_i in tqdm(self.data):
+        for i, d_i in tqdm(enumerate(self.data), total=len(self.data)):
+            if i >= 50:
+                break 
+
             imgs = [d_i['image_0'], d_i['image_1']]
             captions = [d_i['caption_0'], d_i['caption_1']]
 
             with torch.no_grad():
-                    out = model.predict(imgs, captions)
-                    out_i0_t0, out_i0_t1 = out.argmax(dim=0).flatten()
-                    out_i1_t0, out_i1_t1 = out.argmax(dim=1).flatten()
+                out = model.predict(imgs, captions)
+                out_i0_t0, out_i0_t1 = out.argmax(dim=0).flatten()
+                out_i1_t0, out_i1_t1 = out.argmax(dim=1).flatten()
             
             scores.append({
                 'id': d_i['id'], 
@@ -61,6 +64,7 @@ class WinoGroundWrapper:
             image_correct_count += 1 if image_correct(result) else 0
             group_correct_count += 1 if group_correct(result) else 0
 
+        print(text_correct_count, image_correct_count, group_correct_count)
         denominator = len(scores)
         
         return {

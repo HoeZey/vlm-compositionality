@@ -1,0 +1,11 @@
+name: cogvlm
+channels:
+  - defaults
+dependencies:
+  - pip=23.2.1
+  - python=3.10.12
+  - pip:
+      - datasets
+      - huggingface_hub[torch, cli]
+      - python-dotenv
+      - deepspeed==0.14.2

@@ -11,7 +11,7 @@ class Prompt:
         return self.prompt.replace('<caption>', caption)
     
     def answered_positive(self, out: str) -> float:
-        return self.positive_answer in out[len(self.prompt):].lower()
+        return self.positive_answer in out[-12:].lower()
 
     @classmethod
     def get_prompts_from_dict(cls, prompt_dict):

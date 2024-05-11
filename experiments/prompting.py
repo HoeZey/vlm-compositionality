@@ -9,19 +9,20 @@ from prompts.prompt import Prompt
 from benchmarks.benchmark_wrappers import instantiate_benchmarks
 from collections import defaultdict
 
+
 def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     with open('./prompts/prompts_debug.json', 'r') as f:
         prompt_dict = Prompt.get_prompts_from_dict(json.load(f))
     
-    models = [OpenFlamingoWrapper(device)]
+    models = [CogVLMWrapper(device)]
     benchmarks = instantiate_benchmarks()
 
     results = defaultdict(dict)
     for model in models:
         for prompt_type, prompt in prompt_dict.items():
-            # wandb.init(s
+            # wandb.init(
             #     project="generative_models",
             #     entity="fomo-vlm-comp",
             #     config={
@@ -36,7 +37,7 @@ def main() -> None:
                 results[model.name][benchmark.name] = result
                 print(f'{model.name:<5} {benchmark.name:<13} {result}')
                 break
-    # print(results)
+    print(results)
 
 if __name__ == '__main__':
     main()

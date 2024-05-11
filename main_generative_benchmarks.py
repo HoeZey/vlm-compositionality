@@ -9,7 +9,7 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import LlamaTokenizer, AutoModelForCausalLM
 import wandb
 import torch
-from lavis.models import load_model_and_preprocess
+# from lavis.models import load_model_and_preprocess
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -36,12 +36,14 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
         # PROMPT_LIST = ["gpt4-moretokens"]
         PROMPT_LIST = ["alignment"]
-    if _A.evaluation_type == "text_image_group_score":
+    elif _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
         PROMPT_LIST = ["gpt4-evensmallerprompt2"]
         # PROMPT_LIST = ["alignment"]
         # PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
+    elif _A.evaluation_type == 'prompting_experiment':
+        PROMPT_LIST = ['gpt4-evensmallerprompt2', 'cot', 'few-shot']
     
     
     for model_name in _A.model_list:
@@ -51,7 +53,6 @@ def main(_A: argparse.Namespace):
             tokenizer = None
         elif model_name == "blip2_t5":
             model, processor, _ = load_model_and_preprocess(name=model_name, model_type="pretrain_flant5xxl", is_eval=True, device=DEVICE)
-
         elif model_name == "Salesforce/blip2-opt-2.7b":            
             model = Blip2ForConditionalGeneration.from_pretrained(
                 model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
@@ -69,20 +70,21 @@ def main(_A: argparse.Namespace):
         
         for prompt_name in PROMPT_LIST:
             wandb.init(
-            # set the wandb project where this run will be logged
-            project="generative_models",
-            entity="fomo-vlm-comp",
-            # track hyperparameters and run metadata
-            config={
-                "model": model_name,
-                "prompt": prompt_name
-                }
+                # set the wandb project where this run will be logged
+                project="prompting_strategies",
+                entity="fomo-vlm-comp",
+                # track hyperparameters and run metadata
+                config={
+                    "model": model_name,
+                    "prompt": prompt_name
+                    }
             )
 
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
                     print(model_name)
                     # print(model)
+                    # with torch.amp.autocast():
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type, _A.no_hard_negatives)
                     eval_results = benchmark_module.evaluate_winoground()
                     
@@ -93,7 +95,6 @@ def main(_A: argparse.Namespace):
                         wandb.log({'Winoground_text_score' : eval_results['text_score']})
                         wandb.log({'Winoground_image_score' : eval_results['image_score']})
                         wandb.log({'Winoground_group_score' : eval_results['group_score']})
-
                 elif benchmark == "aro":
                     benchmark_module = ARO_generative_evaluation(model, processor, prompt_name)
                     eval_results = benchmark_module.evaluate_winoground_LLava()
@@ -101,7 +102,6 @@ def main(_A: argparse.Namespace):
                     wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']['Accuracy']})
                     wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']['Accuracy']})
                     wandb.log({'ARO_Flickr' : eval_results['ARO_accuracies']['Flickr30k_Order'] ['Accuracy']})
-                
                 elif benchmark == "sugarcrepe":
                     benchmark_module = SugarCrepe_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
                     eval_results = benchmark_module.evaluate_sugarcrepe()
@@ -112,7 +112,6 @@ def main(_A: argparse.Namespace):
                     wandb.log({'Sugarcrepe_replace_rel' : eval_results['SugarCrepe_accuracies']['replace_rel']})
                     wandb.log({'Sugarcrepe_swap_obj' : eval_results['SugarCrepe_accuracies']['swap_obj']}) 
                     wandb.log({'Sugarcrepe_swap_att' : eval_results['SugarCrepe_accuracies']['swap_att']})
-
                 else:
                     raise ValueError(f"Unknown benchmark: {benchmark}")
 

@@ -125,6 +125,7 @@ class Winoground_generative_evaluation:
                  prompt_name=None, 
                  evaluation_type=None,
                  no_hard_negatives=None,
+                 n_shot=8
                  ):
         self.model_name = model_name
         self.model = model
@@ -135,6 +136,8 @@ class Winoground_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
         self.no_hard_negatives = no_hard_negatives
+        auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
+        self.fewshot_data = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["eval"][:n_shot]
         # self.pretrained = pretrained
             
     def show_example(self, benchmark, idx):
@@ -222,38 +225,50 @@ class Winoground_generative_evaluation:
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-
         elif self.prompt_name == "gpt4-smallerprompt":
             prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-
         elif self.prompt_name == "gpt4-evensmallerprompt":
             prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-
-        elif self.prompt_name == "gpt4-evensmallerprompt2":
-            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-        
         elif self.prompt_name == "alignment":
             prompt = "USER: <image> Does this image entail the description:" 
             prompt += caption.strip() + "?"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: <answer>\n"
+            max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        elif self.prompt_name == "cot":
+            prompt = "USER: Does the image match the caption?. Think step-by-step. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: <answer>\n"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "few-shot":
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            fewshot_images = []
+            for x in self.fewshot_data:
+                c0, c1 = x['caption_0'], x['caption_1']
+                fewshot_data.append(x['image_0'])
+                fewshot_data.append(x['image_1'])
+                prompt += f"<image>. Caption: {c0.strip()}. ASSISTANT: <answer>\n"
+                prompt += f"<image>. Caption: {c1.strip()}. ASSISTANT: <answer>\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 1
+
+        inputs = self.processor(text=prompt, images=fewshot_data + [image], return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1]
-        return output    
+        return output
 
     @torch.no_grad()
     def BLIP2_image_to_caption_binary_match(self, caption, image):
@@ -372,15 +387,15 @@ class Winoground_generative_evaluation:
     def evaluate_winoground(self):
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
-
+        len(winoground)
         ##Evaluation
 
         ##images are all winoground images
         random.seed(2023)
         subset_idx = random.sample(range(len(winoground)), 300)
-        # len(subset_idx[:20])
-        #taking the first 20 for time purposes
-        subset_idx = subset_idx[:100]
+        len(subset_idx[:20])
+        # taking the first 20 for time purposes
+        # subset_idx = subset_idx[:100]
         if self.evaluation_type == "text_image_group_score":
             text_correct_count = 0
             image_correct_count = 0
@@ -417,13 +432,10 @@ class Winoground_generative_evaluation:
                 ## map string results to nemurical
                 if self.model_name == "llava-hf/llava-1.5-7b-hf":
                     captioner = self.llava_image_to_caption_binary_match
-
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
                     captioner = self.BLIP2_image_to_caption_binary_match
-                
                 elif self.model_name == "THUDM/cogvlm-chat-hf":
-                    captioner = self.cogvlm_image_to_caption_binary_match
-                
+                    captioner = self.cogvlm_image_to_caption_binary_match            
                 else:
                     raise ValueError(f"Unknown model name: {self.model_name}")
                 
