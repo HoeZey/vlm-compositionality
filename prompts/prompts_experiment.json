@@ -1,16 +1,17 @@
 {
     "regular": {
         "prompt": "USER: <image> Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"). Caption: <caption>. ASSISTANT: The answer is",
-        "pos_ans": "yes"
+        "pos_ans": "yes",
+        "max_new_tokens": 1
     },
-
     "cot": {
         "prompt": "USER: <image> Select whether the image matches the caption. Pay close attention to the word order. Think step-by-step. Give the final answer in the exact format of: \"The answer is Yes/No.\")). Caption: <caption>. ASSISTANT: The answer is",
-        "pos_ans": "yes"
+        "pos_ans": "yes",
+        "max_new_tokens": 100
     },
-
     "few-shot": {
         "prompt": "USER: <image> Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\")). Caption: <caption>. ASSISTANT: The answer is",
-        "pos_ans": "yes"
+        "pos_ans": "yes",
+        "max_new_tokens": 1
     }
 }
