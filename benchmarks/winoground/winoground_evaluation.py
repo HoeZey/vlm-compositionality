@@ -237,6 +237,11 @@ class Winoground_generative_evaluation:
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+        elif self.prompt_name == "alignment":
+            prompt = "USER: <image> Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
 
         elif self.prompt_name == "gpt4-smallerprompt":
             prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
@@ -245,39 +250,29 @@ class Winoground_generative_evaluation:
             max_new_tokens = 35
 
         elif self.prompt_name == "gpt4-evensmallerprompt":
-            prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 3
         elif self.prompt_name == "gpt4-evensmallerprompt2":
-            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-        
-        elif self.prompt_name == "alignment":
-            prompt = "USER: <image> Does this image entail the description:" 
-            prompt += caption.strip() + "?"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
+            prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 3
         elif self.prompt_name == "cot":
-            prompt = "USER: Does the image match the caption?. Think step-by-step. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT:"
-            max_new_tokens = 35
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 50
 
-        elif self.prompt_name == "few-shot":
-            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            fewshot_images = []
-            for x in self.fewshot_data:
-                c0, c1 = x['caption_0'], x['caption_1']
-                fewshot_images.append(x['image_0'])
-                fewshot_images.append(x['image_1'])
-                prompt += f"<image>. Caption: {c0.strip()}. ASSISTANT: <answer>\n"
-                prompt += f"<image>. Caption: {c1.strip()}. ASSISTANT: <answer>\n"
-            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 1
+        # elif self.prompt_name == "few-shot":
+        #     prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+        #     fewshot_images = []
+        #     for x in self.fewshot_data:
+        #         c0, c1 = x['caption_0'], x['caption_1']
+        #         fewshot_images.append(x['image_0'])
+        #         fewshot_images.append(x['image_1'])
+        #         prompt += f"<image>. Caption: {c0.strip()}. ASSISTANT: <answer>\n"
+        #         prompt += f"<image>. Caption: {c1.strip()}. ASSISTANT: <answer>\n"
+        #     prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
+        #     max_new_tokens = 1
 
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
 
@@ -390,16 +385,17 @@ class Winoground_generative_evaluation:
             max_new_tokens = 35
 
         elif self.prompt_name == "gpt4-evensmallerprompt":
-            prompt = "USER: <image>\n Does the image match the caption?. Pay close attention to the word order. Answer in the exact format of: 'Yes' or 'No'\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 3
         elif self.prompt_name == "gpt4-evensmallerprompt2":
-            prompt = "USER: <image>\n Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += "Caption: " + caption.strip() + "\n"
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
+            prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 3
+        elif self.prompt_name == "cot":
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 50
 
         input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
         inputs = {
@@ -431,7 +427,8 @@ class Winoground_generative_evaluation:
 
         ##images are all winoground images
         random.seed(2023)
-        subset_idx = random.sample(range(len(winoground)), 300)
+        # subset_idx = random.sample(range(len(winoground)), 300)
+        subset_idx = range(len(winoground))
         # len(subset_idx[:20])
         #taking the first 20 for time purposes
         subset_idx = subset_idx[:100]
@@ -491,7 +488,7 @@ class Winoground_generative_evaluation:
                 ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
-                if "yes" in ans_c0_i0.lower():
+                if "yes" in ans_c0_i0[:10].lower():
                     result["c0_i0"] = 1.0
                 else:
                     result["c0_i0"] = 0.0
@@ -499,7 +496,7 @@ class Winoground_generative_evaluation:
                 ans_c0_i1 = captioner(caption_0, image_1)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
-                if "yes" in ans_c0_i1.lower():
+                if "yes" in ans_c0_i1[:10].lower():
                     result["c0_i1"] = 1.0
                 else:
                     result["c0_i1"] = 0.0   
@@ -507,7 +504,7 @@ class Winoground_generative_evaluation:
                 ans_c1_i0 = captioner(caption_1, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
                 print ("Match between C1 and I0: ", ans_c1_i0)
-                if "yes" in ans_c1_i0.lower():
+                if "yes" in ans_c1_i0[:10].lower():
                     result["c1_i0"] = 1.0
                 else:
                     result["c1_i0"] = 0.0
@@ -515,7 +512,7 @@ class Winoground_generative_evaluation:
                 ans_c1_i1 = captioner(caption_1, image_1)
                 image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
                 print ("Match between C1 and I1: ", ans_c1_i1)
-                if "yes" in ans_c1_i1.lower():
+                if "yes" in ans_c1_i1[:10].lower():
                     result["c1_i1"] = 1.0
                 else:
                     result["c1_i1"] = 0.0
