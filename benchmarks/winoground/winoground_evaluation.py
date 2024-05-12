@@ -127,6 +127,7 @@ class Winoground_generative_evaluation:
                  prompt_name=None, 
                  evaluation_type=None,
                  no_hard_negatives=None,
+                 n_shot=8
                  ):
         self.model_name = model_name
         self.model = model
@@ -137,6 +138,18 @@ class Winoground_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
         self.no_hard_negatives = no_hard_negatives
+        auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Tokens
+        winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
+        random.seed(2023)
+        subset_idx = random.sample(range(len(winoground)), 100)
+        fewshot_data = []
+        for idx in subset_idx:
+            fewshot_data.append(winoground[idx])
+        # len(subset_idx[:20])
+        #taking the first 20 for time purposes
+        # subset_idx = subset_idx[:8]
+        self.fewshot_data = fewshot_data
+        
         # self.pretrained = pretrained
             
     def show_example(self, benchmark, idx):
@@ -249,7 +262,29 @@ class Winoground_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        elif self.prompt_name == "cot":
+            prompt = "USER: Does the image match the caption?. Think step-by-step. Answer in the format of: \"Yes or No.\"))\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: <answer>\n"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "few-shot":
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            fewshot_images = []
+            for x in self.fewshot_data:
+                c0, c1 = x['caption_0'], x['caption_1']
+                fewshot_images.append(x['image_0'])
+                fewshot_images.append(x['image_1'])
+                prompt += f"<image>. Caption: {c0.strip()}. ASSISTANT: <answer>\n"
+                prompt += f"<image>. Caption: {c1.strip()}. ASSISTANT: <answer>\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 1
+
+            # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+
+        if self.prompt_name == "few-shot":
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)

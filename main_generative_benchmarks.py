@@ -25,7 +25,7 @@ _AA("--no_hard_negatives", help="Evaluation mode in which caption and image pair
 
 # BENCHMARKS_LIST = ["winoground"]
 # BENCHMARKS_LIST = ["sugarcrepe"]
-BENCHMARKS_LIST = ["aro"]
+BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
 
@@ -40,10 +40,11 @@ def main(_A: argparse.Namespace):
         PROMPT_LIST = ['gpt4-shorterprompt']
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
-        PROMPT_LIST = ["gpt4-evensmallerprompt2"]
+        # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
         # PROMPT_LIST = ["alignment"]
         # PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
+        PROMPT_LIST = ["cot"]
     
     
     for model_name in _A.model_list:
