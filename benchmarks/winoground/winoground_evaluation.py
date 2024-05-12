@@ -264,7 +264,7 @@ class Winoground_generative_evaluation:
 
         elif self.prompt_name == "cot":
             prompt = "USER: Does the image match the caption?. Think step-by-step. Answer in the format of: \"Yes or No.\"))\n"
-            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: <answer>\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 35
 
         elif self.prompt_name == "few-shot":
