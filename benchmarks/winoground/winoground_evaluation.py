@@ -296,7 +296,6 @@ class Winoground_generative_evaluation:
             prompt += "Answer:"
             max_new_tokens = 35
 
-
         elif self.prompt_name == "gpt4-smallerprompt":
             prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
             prompt += "Caption: " + caption.strip() + "\n"
@@ -330,19 +329,37 @@ class Winoground_generative_evaluation:
         ##why BLIP2 fails? dataset
 
         # self.model.to(device)
-        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+        # inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+        inputs = self.tokenizer([prompt], padding=True, return_tensors="pt")
+        text_features = self.model.get_text_features(**inputs)
 
-        # # get the logits
-        # if self.contrastive:
-        outs = self.model(**inputs)
-        logits = outs.logits
-        vision_out = outs.vision_outputs
-        text_out = outs.qformer_outputs
-        lm_outs = outs.language_model_outputs
+    
+        
+        # outputs = self.model(**inputs)
+        # text_features = self.model.get_text_features(**inputs)
+        print("text_features", text_features)
+        print("text_features.shape", text_features.shape)
+        # logits = outputs.logits
+        # vision_out0 = outputs.vision_outputs
+        # vision_out = outputs.qformer_outputs
+        # lm_outs = outputs.language_model_outputs
+ 
+        # print("vision_out before Q-former shape", vision_out0.last_hidden_state.shape)
+        # print("vision_out after Q-former shape", vision_out.last_hidden_state.shape)
+
+        # print("lm out keys", outputs.language_model_outputs.keys())
+        # print("lm out past_key 0 shape", outputs.language_model_outputs.past_key_values[0][0].shape)
+        # print("lm out past_key 1 0 shape", outputs.language_model_outputs.past_key_values[1][0].shape)
+        # print("lm out past_key -1 0 shape", outputs.language_model_outputs.past_key_values[-1][0].shape)  
+        # print("lm out past_key -1 -1 shape", outputs.language_model_outputs.past_key_values[-1][-1].shape)   
+        # print("lm wte?", lm_outs.wte)   
+
+        # print("lm out logits shape ", outputs.language_model_outputs.logits.shape)
+        
+        print("logits", logits)
 
         # print("outs.language_model_outputs", outs.language_model_outputs)
         # print("outs.language_model_outputs shape", outs.language_model_outputs.shape)
-
 
         # print("vision_out last hidden", vision_out.last_hidden_state)
         # print("-"*10)
@@ -361,6 +378,40 @@ class Winoground_generative_evaluation:
         # return outs.logits
         
         
+        # Generate
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        # print("generate_ids.logits", generate_ids.logits)
+        output = self.processor.decode(generate_ids[0], skip_special_tokens=True)
+        # print("output.logits", output.logits)
+        # output = output.split('Answer:')[1]
+        return output
+
+    @torch.no_grad()
+    def BLIP2_image_to_caption_contrastive(self, caption, image):
+        
+        if self.prompt_name == "alignment":
+            prompt = "Question: Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "Answer:"
+            max_new_tokens = 35
+
+        ##icl arises form data
+        ##why BLIP2 fails? dataset
+
+        # self.model.to(device)
+        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+
+        # # get the logits
+        # if self.contrastive:
+        outputs = self.model(**inputs)
+        logits = outputs.logits
+        # vision_out = outputs.vision_outputs
+        vision_out = outputs.qformer_outputs
+        lm_outs = outputs.language_model_outputs
+
+        print("vision_out shape", outputs.qformer_outputs.shape)
+        print("lm out shape", outputs.language_model_outputs.shape)
+
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         # print("generate_ids.logits", generate_ids.logits)

@@ -5,7 +5,7 @@ from benchmarks.aro.main_evaluate_aro import ARO_evaluation, ARO_generative_eval
 from benchmarks.sugarcrepe.sugarcrepe_evaluation import SugarCrepe_generative_evaluation
 from benchmarks.winoground.winoground_evaluation import Winoground_generative_evaluation
 from transformers import AutoProcessor, LlavaForConditionalGeneration
-from transformers import Blip2Processor, Blip2ForConditionalGeneration
+from transformers import Blip2Processor, Blip2ForConditionalGeneration, Blip2Model, AutoTokenizer
 from transformers import LlamaTokenizer, AutoModelForCausalLM
 import wandb
 import torch
@@ -18,6 +18,7 @@ _AA = parser.add_argument
 _AA("--model_list", nargs='+', help="List of models to evaluate.")
 _AA("--evaluation_type", help="Evaluation mode to activate. Accuracy overall or text/image/group scores.")
 _AA("--no_hard_negatives", help="Evaluation mode in which caption and image pairs are swapped with ones from different examples.")
+_AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.")
 
 
 
@@ -41,10 +42,10 @@ def main(_A: argparse.Namespace):
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
         # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
-        # PROMPT_LIST = ["alignment"]
+        PROMPT_LIST = ["alignment"]
         # PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
-        PROMPT_LIST = ["cot"]
+        # PROMPT_LIST = ["cot"]
     
     
     for model_name in _A.model_list:
@@ -57,12 +58,18 @@ def main(_A: argparse.Namespace):
         elif model_name == "blip2_t5":
             model, processor, _ = load_model_and_preprocess(name=model_name, model_type="pretrain_flant5xxl", is_eval=True, device=DEVICE)
 
-        elif model_name == "Salesforce/blip2-opt-2.7b":            
-            model = Blip2ForConditionalGeneration.from_pretrained(
-                model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
-            )
-            processor = Blip2Processor.from_pretrained(model_name)
-            tokenizer = None
+        elif model_name == "Salesforce/blip2-opt-2.7b":         
+            if _A.tryingout_ce:
+                model = Blip2Model.from_pretrained(model_name)
+                tokenizer = AutoTokenizer.from_pretrained("Salesforce/blip2-opt-2.7b")
+                processor = None
+
+            else:   
+                model = Blip2ForConditionalGeneration.from_pretrained(
+                    model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
+                )
+                processor = Blip2Processor.from_pretrained(model_name)
+                tokenizer = None
         elif model_name == "THUDM/cogvlm-chat-hf":
             model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=TORCH_TYPE, low_cpu_mem_usage=True, trust_remote_code=True
