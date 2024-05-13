@@ -1,9 +1,6 @@
 #!/bin/bash
 
-cd $HOME/vlm-compositionality/benchmarks/dci/
-# conda env create -f environment.yml
 source activate fomo-vlm-comp
-pip install gdown
 
 # --------------------------------------------------------
 # Download images for HAKE Dataset.
@@ -19,29 +16,29 @@ fi
 cd data/hake
 
 # ---------------V-COCO Dataset--------------------
-# echo "Downloading V-COCO Dataset"
+echo "Downloading V-COCO Dataset"
 
-# URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
-# URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
-# #URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
+URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
+URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
+#URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
 
-# wget -N $URL_2017_Train_images
-# wget -N $URL_2017_Val_images
-# #wget -N $URL_2017_Test_images
+wget -N $URL_2017_Train_images
+wget -N $URL_2017_Val_images
+#wget -N $URL_2017_Test_images
 
-# if [ ! -d vcoco ];then
-#     mkdir vcoco
-# fi
+if [ ! -d vcoco ];then
+    mkdir vcoco
+fi
 
-# echo "Unzipping train"
-# unzip -q train2017.zip -d vcoco/
-# echo "Unzipping val"
-# unzip -q val2017.zip -d vcoco/
-# #unzip test2017.zip -d vcoco/
+echo "Unzipping train"
+unzip -q train2017.zip -d vcoco/
+echo "Unzipping val"
+unzip -q val2017.zip -d vcoco/
+#unzip test2017.zip -d vcoco/
 
-# rm train2017.zip
-# rm val2017.zip
-# #rm test2017.zip
+rm train2017.zip
+rm val2017.zip
+#rm test2017.zip
 
 # echo "V-COCO Dataset Downloaded!\n"
 
@@ -49,7 +46,7 @@ cd data/hake
 echo "Downloading HICO-DET Dataset"
 
 # source: https://github.com/YueLiao/CDN#hico-det
-gdown 1dUByzVzM6z1Oq4gENa1-t0FLhr0UtDaS -O hico_20160224_det.tar.gz
+python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1QZcJmGVlF9f4h-XLWe9Gkmnmj2z1gSnk' hico_20160224_det.tar.gz
 tar -xzf hico_20160224_det.tar.gz -C ./
 rm hico_20160224_det.tar.gz
 
@@ -62,7 +59,7 @@ if [ ! -d hcvrd ];then
     mkdir hcvrd
 fi
 # source: https://github.com/DirtyHarryLYL/HAKE/blob/master/Images/download_image/hcvrd_url.json
-srun python $HOME/vlm-compositionality/benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download.py '/vlm-compositionality/benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/hcvrd_url.json' ./hcvrd
+python ../reproduction/densely_captioned_images/repro/setup_data/download.py '../reproduction/densely_captioned_images/repro/setup_data/hcvrd_url.json' ./hcvrd
 
 echo "HCVRD(part) Dataset Downloaded!\n"
 
@@ -73,7 +70,7 @@ echo "HCVRD(part) Dataset Downloaded!\n"
 echo "Downloading openimages(part) Dataset"
 
 # source: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
-gdown 1XTWYLyL1h-9jJ49dsXmtRCv8GcupVrvM -O openimages.tar.gz
+python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1XTWYLyL1h-9jJ49dsXmtRCv8GcupVrvM' openimages.tar.gz
 tar -xzf openimages.tar.gz -C ./
 rm openimages.tar.gz
 
@@ -85,7 +82,7 @@ echo "openimages(part) Dataset Downloaded!\n"
 echo "Downloading pic Dataset"
 
 # source: https://picdataset.com/challenge/task/download/
-gdown 1fBJh0mdWhOkOyN5X8is7a2MDb2CE7eCw -O pic.tar.gz
+python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1fBJh0mdWhOkOyN5X8is7a2MDb2CE7eCw' pic.tar.gz
 tar -xzf pic.tar.gz -C ./
 rm pic.tar.gz
 mkdir pic
@@ -95,20 +92,22 @@ rm -rf image
 
 echo "pic Dataset Downloaded!\n"
 
+
 # ---------------hake uploads-------------------------
 
 # Sources: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
 echo "Downloading hake Dataset 1"
 
-gdown 18R_3Oz7zO1knEjagY6sfUkQ1_6wZf0Ei -O hake_images_20190730.tar.gz
+python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '1Smrsy9AsOUyvj66ytGmB5M3WknljwuXL' hake_images_20190730.tar.gz
 tar -xzf hake_images_20190730.tar.gz -C ./
 rm hake_images_20190730.tar.gz
 
 echo "hake part 1 Dataset Downloaded!\n"
 
+
 echo "Downloading hake Dataset 2"
 
-gdown 14K_4FfjviJNDVLJdGM96W2ZLN55dDb2- -O hake_images_20200614.tar.gz
+python ../reproduction/densely_captioned_images/repro/setup_data/download_from_drive.py '14K_4FfjviJNDVLJdGM96W2ZLN55dDb2-' hake_images_20200614.tar.gz
 tar -xzf hake_images_20200614.tar.gz -C ./
 rm hake_images_20200614.tar.gz
 
@@ -116,36 +115,36 @@ echo "hake part 2 Dataset Downloaded!\n"
 
 
 # ---------------SWiG-------------------------
-# echo "Setting up SWiG"
-# cd ..
-# mkdir swig
+echo "Setting up SWiG"
+cd ..
+mkdir swig
 
-# # source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#swig
-# wget -N  https://swig-data-weights.s3.us-east-2.amazonaws.com/images_512.zip
-# unzip -q images_512.zip -d ./
-# rm images_512.zip
-# mv images_512 swig
+# source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#swig
+wget -N  https://swig-data-weights.s3.us-east-2.amazonaws.com/images_512.zip
+unzip -q images_512.zip -d ./
+rm images_512.zip
+mv images_512 swig
 
 
-# echo "SWiG Downloaded!\n"
+echo "SWiG Downloaded!\n"
 
 # ---------------VG-------------------------
-# echo "Setting up Visual Genome"
+echo "Setting up Visual Genome"
 
-# mkdir vg
-# mkdir vg/VG_100K
-# mkdir vg/VG_100K_2
+mkdir vg
+mkdir vg/VG_100K
+mkdir vg/VG_100K_2
 
-# # source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#vg--vaw
-# wget -N https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip
-# wget -N https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip
+# source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#vg--vaw
+wget -N https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip
+wget -N https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip
 
-# unzip -q images.zip -d vg/
-# unzip -q images2.zip -d vg/
-# rm images.zip
-# rm images2.zip
+unzip -q images.zip -d vg/
+unzip -q images2.zip -d vg/
+rm images.zip
+rm images2.zip
 
-# echo "Visual Genome Downloaded!\n"
+echo "Visual Genome Downloaded!\n"
 
 # ----- clear any files that didn't download correctly -----
 
