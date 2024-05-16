@@ -1,9 +1,9 @@
 import argparse
 import os
 import json
-from benchmarks.aro.main_evaluate_aro import ARO_evaluation
-from benchmarks.sugarcrepe.sugarcrepe_evaluation import SugarCrepe_evaluation
-from benchmarks.winoground.winoground_evaluation import Winoground_evaluation
+from wrappers.benchmarks.main_evaluate_aro import ARO_evaluation
+from wrappers.benchmarks.sugarcrepe_evaluation import SugarCrepe_evaluation
+from wrappers.benchmarks.winoground_evaluation import Winoground_evaluation
 import wandb
 
 parser = argparse.ArgumentParser(description=__doc__)

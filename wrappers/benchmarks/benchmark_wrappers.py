@@ -6,13 +6,6 @@ from .utils import *
 from constants import HF_ACCESS_TOKEN
 
 
-class Benchmark:
-    def evaluate(self, model) -> list[float]: 
-        pass
-    
-    @property
-    def name(self) -> str:
-        pass
 
 
 class WinoGroundWrapper:

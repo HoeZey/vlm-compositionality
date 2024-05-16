@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.getcwd())
 from models.model_wrappers import OpenClipWrapper
-from benchmarks.benchmark_wrappers import instantiate_benchmarks
+from wrappers.benchmarks.benchmark_wrappers import instantiate_benchmarks
 from collections import defaultdict
 
 

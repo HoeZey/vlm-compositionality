@@ -1,9 +1,9 @@
 import argparse
 import os
 import json
-from benchmarks.aro.main_evaluate_aro import ARO_evaluation, ARO_generative_evaluation
-from benchmarks.sugarcrepe.sugarcrepe_evaluation import SugarCrepe_generative_evaluation
-from benchmarks.winoground.winoground_evaluation import Winoground_generative_evaluation
+from wrappers.benchmarks.main_evaluate_aro import ARO_evaluation, ARO_generative_evaluation
+from wrappers.benchmarks.sugarcrepe_evaluation import SugarCrepe_generative_evaluation
+from wrappers.benchmarks.winoground_evaluation import Winoground_generative_evaluation
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 from transformers import Blip2Processor, Blip2ForConditionalGeneration, Blip2Model, AutoTokenizer
 from transformers import LlamaTokenizer, AutoModelForCausalLM
