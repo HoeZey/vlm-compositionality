@@ -62,7 +62,7 @@ class VG_Relation(Dataset):
         # Each test case has a correct and incorrect caption.
         true_caption = test_case["true_caption"]
         false_caption = test_case["false_caption"]
-        item = edict({"image_options": [image], "caption_options": [true_caption, false_caption]})
+        item = edict({"image_options": [image], "caption_options": [false_caption, true_caption]})
         return item
     
     def download(self):
@@ -74,7 +74,7 @@ class VG_Relation(Dataset):
         
     def evaluate_scores(self, scores):
         """
-        Scores: N x 1 x 2, i.e. first caption is the positive one, second is the perturbed one
+        Scores: N x 1 x 2, i.e. first caption is the perturbed one, second is the positive one
         """
         if isinstance(scores, tuple):
             scores_i2t = scores[1]
@@ -85,7 +85,7 @@ class VG_Relation(Dataset):
 
         metrics = {"Accuracy": None}
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
-        correct_mask = (preds == 0)
+        correct_mask = (preds == 1)
         metrics["Accuracy"] = np.mean(correct_mask)
 
         all_relations = np.array(self.all_relations)
@@ -153,7 +153,7 @@ class VG_Attribution(Dataset):
         # Each test case has a correct and incorrect caption.
         true_caption = test_case["true_caption"]
         false_caption = test_case["false_caption"]
-        item = edict({"image_options": [image], "caption_options": [true_caption, false_caption]})
+        item = edict({"image_options": [image], "caption_options": [false_caption, true_caption]})
         return item
     
     def download(self):
@@ -165,7 +165,7 @@ class VG_Attribution(Dataset):
     
     def evaluate_scores(self, scores):
         """
-        Scores: N x 1 x 2, i.e. first caption is the positive one, second is the perturbed one
+        Scores: N x 1 x 2, i.e. first caption is the perturbed one, second is the positive one
         """
         if isinstance(scores, tuple):
             scores_i2t = scores[1]
@@ -175,7 +175,7 @@ class VG_Attribution(Dataset):
             scores_i2t = scores
 
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
-        correct_mask = (preds == 0)
+        correct_mask = (preds == 1)
         result_records = []
         all_attributes = np.array(self.all_attributes)
         for attr in np.unique(all_attributes):
@@ -277,8 +277,7 @@ class COCO_Order(Dataset):
         
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
         correct_mask = (preds == 0)
-        # records = [{"Precision@1": np.mean(correct_mask)}]
-        records = [{"Accuracy": np.mean(correct_mask)}]
+        records = [{"Precision@1": np.mean(correct_mask)}]
         return records
 
 
@@ -344,8 +343,7 @@ class Flickr30k_Order(Dataset):
         
         preds = np.argmax(np.squeeze(scores_i2t, axis=1), axis=-1)
         correct_mask = (preds == 0)
-        # result_records = [{"Precision@1": np.mean(correct_mask)}]
-        result_records = [{"Accuracy": np.mean(correct_mask)}]
+        result_records = [{"Precision@1": np.mean(correct_mask)}]
         return result_records
 
 

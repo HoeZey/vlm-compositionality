@@ -1,17 +1,24 @@
-from abc import ABC, abstractmethod
+from wrappers.prompt import ZeroShotPrompt
 
 
-class VLModelWrapper(ABC, torch.nn.Module):
+class ContrastiveVLMWrapper:
     '''
     The forward function of VLModelWrapper should return FloatTensor
     containing the logits per text, i.e. out: R^N_text
     '''
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
+    def predict_binary():
         pass
 
+    def predict_choice():
+        pass
+
+
+class GenerativeVLMWrapper:
+    def predict_binary():
+        pass
+
+    def predict_choice():
+        pass
     
 
 class Benchmark:

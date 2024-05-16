@@ -1,1 +1,1 @@
-CACHE_DIR=".cache"
+CACHE_DIR="~/.cache"

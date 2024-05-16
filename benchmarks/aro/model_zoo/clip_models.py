@@ -1,4 +1,4 @@
-import open_clip
+import clip
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -6,8 +6,7 @@ import torch.nn.functional as F
 
 
 class CLIPWrapper:
-    def __init__(self, model_name, model, device):
-        self.model_name = model_name
+    def __init__(self, model, device):
         self.model = model
         self.device = device
     
@@ -17,10 +16,9 @@ class CLIPWrapper:
         text_embeds = []
         tqdm_loader = tqdm(range(0, num_text, text_batch_size))
         tqdm_loader.set_description("Computing text embeddings")
-        tokenizer = open_clip.get_tokenizer(self.model_name)
         for i in tqdm_loader:
             text = texts[i: min(num_text, i+text_batch_size)]
-            text_input = tokenizer(text).to(self.device) 
+            text_input = clip.tokenize(text).to(self.device) 
             text_feats = self.model.encode_text(text_input)
             if normalize:
                 text_feats = F.normalize(text_feats,dim=-1)      
@@ -69,7 +67,6 @@ class CLIPWrapper:
         scores = []
         tqdm_loader = tqdm(joint_loader)
         tqdm_loader.set_description("Computing retrieval scores")
-        tokenizer = open_clip.get_tokenizer(self.model_name)
         for batch in tqdm_loader:
             image_options = []
             for i_option in batch["image_options"]:
@@ -79,12 +76,9 @@ class CLIPWrapper:
             
             caption_options = []
             for c_option in batch["caption_options"]:
-                caption_tokenized = torch.cat([tokenizer(c) for c in c_option])
-                # caption_tokenized = open_clip.tokenize(c_option, dim)
+                caption_tokenized = torch.cat([clip.tokenize(c) for c in c_option])
                 caption_embeddings = self.model.encode_text(caption_tokenized.to(self.device)).cpu().numpy() # B x D
                 caption_embeddings = caption_embeddings / np.linalg.norm(caption_embeddings, axis=1, keepdims=True) # B x D
-                # caption_embeddings = self.model.encode_text(caption_tokenized.to(self.device))
-                # caption_embeddings /= caption_embeddings.norm(dim=-1, keepdim=True)
                 caption_options.append(np.expand_dims(caption_embeddings, axis=1))
                 
             image_options = np.concatenate(image_options, axis=1) # B x K x D

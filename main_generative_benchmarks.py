@@ -66,7 +66,7 @@ def main(_A: argparse.Namespace):
 
             else:   
                 model = Blip2ForConditionalGeneration.from_pretrained(
-                    model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
+                    model_name, load_in_8bit=True, device_map='auto', torch_dtype=torch.float16
                 )
                 processor = Blip2Processor.from_pretrained(model_name)
                 tokenizer = None

@@ -1,0 +1,12 @@
+{
+    "regular": {
+        "prompt": "USER: Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of \"Yes or No\".\n<example>\nASSISTANT: The answer is",
+        "example_format": "Image: <image>. Caption: <caption>.",
+        "pos_ans": "yes"
+    },
+    "cot": {
+        "prompt": "USER: Select whether the image matches the caption. Pay close attention to the word order. Give a short step-by-step explanation of your reasoning. Give the final answer in the exact format of \"Yes or No\".\n<examples>",
+        "example_format": "USER: Image: <image>. Caption: <caption>. ASSISTANT: The answer is ",
+        "pos_ans": "yes"
+    }
+}
