@@ -12,20 +12,27 @@ from urllib.request import urlretrieve
 from tqdm import tqdm
 import json as js
 from pathlib import Path
+import asyncio
+import aiohttp
+import aiofiles
 
 
-def image_url_download(url_file, to_folder):
-    count = 0
-    if not os.path.exists(os.path.join(Path.home(), to_folder)):
+async def download_image(session, url, to_folder, img):
+    async with session.get(url) as response:
+        async with aiofiles.open(os.path.join(to_folder, img), 'wb') as f:
+            await f.write(await response.read())
+
+
+async def image_url_download(url_file, to_folder):
+    if not os.path.exists(to_folder):
         os.mkdir(to_folder)
-    contents = js.load(open(url_file, 'r'))
-    for img in tqdm(contents):
-        if not os.path.exists(os.path.join(Path.home(), to_folder, img)):
-            try:
-                urlretrieve(contents[img], os.path.join(Path.home(), to_folder, img))
-            except:
-                count += 1
-    print(count)
+    contents = js.load(open(Path.home().joinpath(url_file), 'r'))
+
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*[
+            download_image(session, url, to_folder, img) for img, url in tqdm(contents.items())
+            if not os.path.exists(os.path.join(to_folder, img))
+        ])
 
 
 if __name__=='__main__':
@@ -33,5 +40,4 @@ if __name__=='__main__':
     if len(sys.argv) != 3:
         print("Usage: python download.py url_base imgname to_folder")
     else:
-        image_url_download(sys.argv[1], sys.argv[2])
-        
+        asyncio.run(image_url_download(sys.argv[1], sys.argv[2]))
