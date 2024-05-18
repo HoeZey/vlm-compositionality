@@ -432,18 +432,18 @@ class Winoground_generative_evaluation:
         ##why BLIP2 fails? dataset
 
         # self.model.to(device)
-        # inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
 
-        inputs = self.tokenizer([prompt], padding=True, return_tensors="pt")
-        text_features = self.model.get_text_features(**inputs)
+        # inputs = self.tokenizer([prompt], padding=True, return_tensors="pt")
+        # text_features = self.model.get_text_features(**inputs)
 
     
         
         # outputs = self.model(**inputs)
 
-        language_model = self.model.language_model.ff
-        print("language_model ff", language_model)
+        # language_model = self.model.language_model.ff
+        # print("language_model ff", language_model)
         
         # logits = outputs.logits
         # vision_out0 = outputs.vision_outputs
@@ -462,7 +462,7 @@ class Winoground_generative_evaluation:
 
         # print("lm out logits shape ", outputs.language_model_outputs.logits.shape)
         
-        print("logits", logits)
+        # print("logits", logits)
 
         # print("outs.language_model_outputs", outs.language_model_outputs)
         # print("outs.language_model_outputs shape", outs.language_model_outputs.shape)
@@ -605,7 +605,7 @@ class Winoground_generative_evaluation:
         subset_idx = range(len(winoground))
         # len(subset_idx[:20])
         #taking the first 20 for time purposes
-        subset_idx = subset_idx[:100]
+        
         if self.evaluation_type == "logits":
             text_correct_count = 0
             image_correct_count = 0

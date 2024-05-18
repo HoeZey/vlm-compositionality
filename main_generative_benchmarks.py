@@ -11,7 +11,7 @@ import wandb
 import torch
 from torchvision import transforms as T
 
-TESTING = True
+TESTING = False
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -48,6 +48,8 @@ def main(_A: argparse.Namespace):
         PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["cot"]
+    if _A.evaluation_type == "logits":
+        PROMPT_LIST = ["gpt4-smallerprompt"]
     
     
     for model_name in _A.model_list: 
@@ -82,7 +84,7 @@ def main(_A: argparse.Namespace):
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged
-            project="generative_models",
+            project="full_datasets",
             entity="fomo-vlm-comp",
             # track hyperparameters and run metadata
             config={
