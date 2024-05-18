@@ -9,6 +9,9 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import random
 
+from transformers import LlamaTokenizerFast
+
+from transformers import AutoTokenizer, LlamaForCausalLM
 
 class Winoground_evaluation:
     """
@@ -281,11 +284,111 @@ class Winoground_generative_evaluation:
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
+        # outputs = self.model(**inputs)
+        # hidden_states = outputs.hidden_states
+        # vision_hs = outputs.image_hidden_states
+        # vis = outputs.vision_outputs
+        # print("vis", vis)
+        # print("hidden_states", hidden_states)
+        # print("vision_hs", vision_hs)
+
+
+        # lm_out = self.model.language_model(**inputs)
+        # print("out emb", self.model.language_model.get_output_embeddings())
+        # print("in emb", self.model.language_model.get_input_embeddings())
+        # # print("lm_out embed", lm_out.get_output_embeddings())
+        # print("lm_out", lm_out["logits"].shape)
+        # print(lm_out.keys())
+
+
+        # use_auth_token = "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"
+        # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", use_auth_token=use_auth_token)
+        # prompt = "No"
+        # inputs_language = tokenizer(prompt, return_tensors="pt")
+        # print("inputs_language", inputs_language)
+        
+        ##YES: id = 22483
+        ##NO: id = 1939
+        # lm_hidden_state = self.model.language_model.model(**inputs_language)
+        # print("Language Model hidden state",lm_hidden_state[0])
+        # print("Language Model hidden state shape",lm_hidden_state[0].shape)
+        # print("language model", self.model.language_model)
+
+        # text_out = self.model.language_model.lm_head.weight
+        # lm_head = self.model.language_model.lm_head
+        # embed_tokens = self.model.language_model.embed_tokens
+        # print("embed_tokens", embed_tokens)
+        # print("language_model decoder", text_out.shape)
+        # print("lm_head", lm_head)
+
+        # outputs = self.model(**inputs)
+        # print("outs keys", outputs.keys())
+        # logits = outputs.logits.squeeze()
+        # yes_logits = torch.mean(logits[:, 22483])
+        # no_logtis = torch.mean(logits[:, 1939])
+        # # print("yes_logits", yes_logits.shape)
+        # # print("no_logits", no_logtis.shape)
+        # # print("logits", logits.shape)
+        # print("yes_logits", yes_logits) 
+    
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+
+        
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1]
         return output    
+
+    @torch.no_grad()
+    def llava_image_to_caption_logits(self, caption, image):
+        
+        if self.prompt_name == "gpt4":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "alignment":
+            prompt = "USER: <image> Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "cot":
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 50
+
+
+
+        if self.prompt_name == "few-shot":
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        yes_logits = torch.mean(logits[:, 22483])
+        no_logtis = torch.mean(logits[:, 1939])
+        
+        # print("yes_logits", yes_logits.shape)
+        # print("no_logits", no_logtis.shape)
+        # print("logits", logits.shape)
+
+        return yes_logits
 
     @torch.no_grad()
     def BLIP2_image_to_caption_binary_match(self, caption, image):
@@ -330,15 +433,18 @@ class Winoground_generative_evaluation:
 
         # self.model.to(device)
         # inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+
+
         inputs = self.tokenizer([prompt], padding=True, return_tensors="pt")
         text_features = self.model.get_text_features(**inputs)
 
     
         
         # outputs = self.model(**inputs)
-        # text_features = self.model.get_text_features(**inputs)
-        print("text_features", text_features)
-        print("text_features.shape", text_features.shape)
+
+        language_model = self.model.language_model.ff
+        print("language_model ff", language_model)
+        
         # logits = outputs.logits
         # vision_out0 = outputs.vision_outputs
         # vision_out = outputs.qformer_outputs
@@ -401,6 +507,16 @@ class Winoground_generative_evaluation:
         # self.model.to(device)
         inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
+        #contrastive:
+        tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+        prompt = "Yes"
+        inputs_language = tokenizer(prompt, return_tensors="pt")
+        print("inputs_language", inputs_language)
+        
+        lm_hidden_state = self.model.language_model.model(**inputs_language)
+        print("Language Model hidden state shape", lm_hidden_state[0].squeeze().shape)
+    
+
         # # get the logits
         # if self.contrastive:
         outputs = self.model(**inputs)
@@ -458,6 +574,13 @@ class Winoground_generative_evaluation:
         if 'cross_images' in input_by_model and input_by_model['cross_images']:
             inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
 
+
+        # Contrastive step
+        outputs = self.model(**inputs)
+        print("outs keys", outputs.keys())
+        logits = outputs.logits
+        print("logits", logits.shape)
+
         # Generate
         gen_kwargs = {"max_length": 2048,
                       "do_sample": False} # "temperature": 0.9
@@ -483,6 +606,48 @@ class Winoground_generative_evaluation:
         # len(subset_idx[:20])
         #taking the first 20 for time purposes
         subset_idx = subset_idx[:100]
+        if self.evaluation_type == "logits":
+            text_correct_count = 0
+            image_correct_count = 0
+            group_correct_count = 0
+            total = 0
+            image_caption_match_results = {}
+
+            for idx in tqdm(subset_idx):
+                image_0 = winoground[idx]["image_0"].convert("RGB")
+                # image_1 = winoground[idx]["image_1"].convert("RGB")
+                caption_0 = winoground[idx]["caption_0"]
+                image_1 = winoground[idx]["image_1"].convert("RGB")
+                caption_1 = winoground[idx]["caption_1"]
+                # print("caption_1", caption_1)
+                print ("Example: #", total)
+                # self.show_example(benchmark=winoground, idx=idx)
+                result = {}
+                # try:
+                ## map string results to nemurical
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    captioner = self.llava_image_to_caption_logits
+
+                # elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                #     captioner = self.BLIP2_image_to_caption_binary_match
+                
+                # elif self.model_name == "THUDM/cogvlm-chat-hf":
+                #     captioner = self.cogvlm_image_to_caption_binary_match
+                
+                
+                result["c0_i0"] = captioner(caption_0, image_0)
+                result["c0_i1"] = captioner(caption_0, image_1)
+                result["c1_i0"] = captioner(caption_1, image_0)
+                result["c1_i1"] = captioner(caption_1, image_1)
+
+                text_correct_count += 1 if self.text_correct(result) else 0
+                image_correct_count += 1 if self.image_correct(result) else 0
+                group_correct_count += 1 if self.group_correct(result) else 0
+
+                total += 1
+                print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
+
+
         if self.evaluation_type == "text_image_group_score":
             text_correct_count = 0
             image_correct_count = 0

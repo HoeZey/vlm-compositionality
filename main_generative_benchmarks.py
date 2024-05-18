@@ -11,6 +11,8 @@ import wandb
 import torch
 from torchvision import transforms as T
 
+TESTING = True
+
 
 parser = argparse.ArgumentParser(description=__doc__)
 _AA = parser.add_argument
@@ -42,22 +44,20 @@ def main(_A: argparse.Namespace):
     if _A.evaluation_type == "text_image_group_score":
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
         # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
-        PROMPT_LIST = ["alignment"]
-        # PROMPT_LIST = ["gpt4-smallerprompt"]
+        # PROMPT_LIST = ["alignment"]
+        PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["cot"]
     
     
-    for model_name in _A.model_list:
+    for model_name in _A.model_list: 
         if model_name == "llava-hf/llava-1.5-7b-hf":
             model = LlavaForConditionalGeneration.from_pretrained(model_name).to(DEVICE).eval()
             processor = AutoProcessor.from_pretrained(model_name)
             tokenizer = None
             # print(f"Processor type: {type(processor)}")
             # print(f"Processor details: {processor}")
-        elif model_name == "blip2_t5":
-            model, processor, _ = load_model_and_preprocess(name=model_name, model_type="pretrain_flant5xxl", is_eval=True, device=DEVICE)
-
+        
         elif model_name == "Salesforce/blip2-opt-2.7b":         
             if _A.tryingout_ce:
                 model = Blip2Model.from_pretrained(model_name)
@@ -88,7 +88,8 @@ def main(_A: argparse.Namespace):
             config={
                 "model": model_name,
                 "prompt": prompt_name
-                }
+                },
+            mode="disabled" if TESTING else "online",
             )
 
             for benchmark in BENCHMARKS_LIST:                                   

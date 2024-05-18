@@ -51,3 +51,4 @@ datasets/
 outputs/
 .cache/
 wandb/
+scripts/
