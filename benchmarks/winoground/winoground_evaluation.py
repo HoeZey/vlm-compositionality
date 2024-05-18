@@ -493,7 +493,7 @@ class Winoground_generative_evaluation:
         return output
 
     @torch.no_grad()
-    def BLIP2_image_to_caption_contrastive(self, caption, image):
+    def BLIP2_image_to_caption_logits(self, caption, image):
         
         if self.prompt_name == "alignment":
             prompt = "Question: Does this image entail the description:" 
@@ -576,6 +576,9 @@ class Winoground_generative_evaluation:
 
 
         # Contrastive step
+        lm = self.model.language_model.model(**inputs)
+        print("lm", lm)
+
         outputs = self.model(**inputs)
         print("outs keys", outputs.keys())
         logits = outputs.logits
@@ -591,6 +594,48 @@ class Winoground_generative_evaluation:
 
         output = output.split("</s>")[0]
         return output
+
+    @torch.no_grad()
+    def cogvlm_image_to_caption_logits(self, caption, image):
+        
+        if self.prompt_name == "gpt4":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. (Give a short explanation first, then change to a new line give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "alignment":
+            prompt = "USER: <image> Does this image entail the description:" 
+            prompt += caption.strip() + "?"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "USER: <image>\n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "gpt4-evensmallerprompt":
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "gpt4-evensmallerprompt2":
+            prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 35
+        elif self.prompt_name == "cot":
+            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
+            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
+            max_new_tokens = 50
+
+
+
+        if self.prompt_name == "few-shot":
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+
 
     def evaluate_winoground(self):
 

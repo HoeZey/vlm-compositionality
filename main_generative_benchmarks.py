@@ -26,9 +26,9 @@ _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
-# BENCHMARKS_LIST = ["winoground"]
-# BENCHMARKS_LIST = ["sugarcrepe"]
 BENCHMARKS_LIST = ["winoground"]
+# BENCHMARKS_LIST = ["sugarcrepe"]
+# BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
 
@@ -46,6 +46,7 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
         # PROMPT_LIST = ["alignment"]
         PROMPT_LIST = ["gpt4-smallerprompt"]
+        # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["cot"]
     if _A.evaluation_type == "logits":
@@ -103,11 +104,12 @@ def main(_A: argparse.Namespace):
                     
                     if _A.evaluation_type == "accuracy_score":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy_score"]})
-                    elif _A.evaluation_type == "text_image_group_score":
+                    else:
                         # print("Logging scores...")
                         wandb.log({'Winoground_text_score' : eval_results['text_score']})
                         wandb.log({'Winoground_image_score' : eval_results['image_score']})
                         wandb.log({'Winoground_group_score' : eval_results['group_score']})
+                
 
                 elif benchmark == "aro":
                     benchmark_module = ARO_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
