@@ -10,8 +10,6 @@ from benchmarks.vlc.vl_checklist.evaluate import Evaluate
 from clip_vlc_wrap import VLCtoHFCLIPWrap
 
 
-# os.chdir('/')
-
 VLC_ROOT_PATH = "./benchmarks/vlc/"
 EVAL_LOG_PATH = "./log_tmp/"
 
@@ -68,15 +66,13 @@ OUTPUT:
   NUM: 0
 """
 
-VLC_ROOT_PATH = './benchmarks/vlc/'
-# EVAL_LOG_PATH = 
+
 CORPUS_PATH = os.path.join(VLC_ROOT_PATH, 'corpus.json')
-LOG_PATH = os.path.join('./outputs/vlc/')
+LOG_PATH = os.path.join(EVAL_LOG_PATH, 'vlc')
 
 
 def score_vlc(model_name, swig_only=False):
     m = json.load(open(CORPUS_PATH))
-    # print(m)
     if swig_only:
         m = {
             task_name: {
@@ -133,7 +129,7 @@ def run_vlc_on_model(model: CLIPModel, processor: CLIPProcessor, model_name=None
             yaml_path = os.path.join(EVAL_LOG_PATH, f"vlc-{model_name}-{task}.yaml")
             with open(yaml_path, 'w+') as yaml_file:
                 yaml_file.write(yaml)
-            
+
             evaluator = Evaluate(config_file=yaml_path, model=wrap_model)
             evaluator.start()
             os.unlink(yaml_path)
@@ -145,3 +141,4 @@ if __name__ == '__main__':
     clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     run_vlc_on_model(clip_model, clip_processor, model_name='clip-baseline')
+

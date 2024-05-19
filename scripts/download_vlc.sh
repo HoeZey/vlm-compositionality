@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd $HOME/vlm-compositionality/benchmarks/dci/
+cd $HOME/"OneDrive - Rewire"/Documents/Personal/University/FM/vlm-compositionality/benchmarks/dci/
 # conda env create -f environment.yml
 source activate fomo-vlm-comp
 pip install gdown

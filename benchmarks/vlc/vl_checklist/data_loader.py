@@ -48,7 +48,7 @@ class DataLoader(object):
             for x in m:
                 path, texts_dict = x
                 path = os.path.join(config["IMG_ROOT"], path)
-                print(path)
+                # print(path)
                 if os.path.exists(path):
                     corpus[corpus_name].append({
                         "path": path,
