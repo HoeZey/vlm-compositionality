@@ -72,7 +72,7 @@ def main(_A: argparse.Namespace):
                 tokenizer = None
         elif model_name == "THUDM/cogvlm-chat-hf":
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=TORCH_TYPE, low_cpu_mem_usage=True, trust_remote_code=True
+                model_name, torch_dtype=TORCH_TYPE, low_cpu_mem_usage=True
             ).to(DEVICE).eval()
             processor = None
             tokenizer = LlamaTokenizer.from_pretrained("lmsys/vicuna-7b-v1.5")
