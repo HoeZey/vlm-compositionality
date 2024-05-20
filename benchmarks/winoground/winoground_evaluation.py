@@ -260,10 +260,68 @@ class Winoground_generative_evaluation:
             prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 3
-        elif self.prompt_name == "cot":
-            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
-            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
-            max_new_tokens = 50
+        
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 1)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image." 
+            "Begin by describing the key elements visible in the image. Compare these elements with the details mentioned in the caption." 
+            "Answer by stating your choice between 'yes' or 'no', and follow with a detailed explanation of why that caption fits best.\n")
+            prompt += "Caption:" + caption.strip() + "\n"
+            prompt += "ASSISTANT: Answer: {Answer caption here}. Explanation: {Provide a detailed explanation here}."
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as 'Yes' or 'No'.\n")
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Evaluate the caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does the caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in the caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as 'Yes' or 'No', "
+            prompt += "based on the caption score across these criteria.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects.\n"
+                    "Start by commenting on the general accuracy and relevance of the caption: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on the caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of the caption? \n"
+            prompt += "3. Depth of Description: Consider if the caption provides a comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'Yes' or 'No'.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate the caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'Yes' or 'No'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the caption and a summary of your reasoning across all cycles.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
 
         # elif self.prompt_name == "few-shot":
         #     prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"

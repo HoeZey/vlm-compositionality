@@ -243,7 +243,7 @@ class SugarCrepe_generative_evaluation:
             #     captioner = self.cogvlm_caption_choice
             for c, data_dict in sugarcrepe.items():
                 correct_cnt = 0
-                idx_limit = 20
+                idx_limit = len(data_dict)
                 iter_cnt = 0
                 for data in tqdm(data_dict, desc=f'evaluating {c}'):
                     correct = 0

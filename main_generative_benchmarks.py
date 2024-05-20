@@ -49,6 +49,10 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["cot"]
+        # PROMPT_LIST = ["cot", "auto-cot", "cbe-cot", "ltm-cot", "sc-cot"]
+        
+        PROMPT_LIST = ["cbe-cot"]
+
     if _A.evaluation_type == "logits":
         PROMPT_LIST = ["gpt4-smallerprompt"]
     
@@ -85,7 +89,7 @@ def main(_A: argparse.Namespace):
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged
-            project="full_datasets",
+            project="cot_exp",
             entity="fomo-vlm-comp",
             # track hyperparameters and run metadata
             config={
