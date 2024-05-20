@@ -240,6 +240,8 @@ class ARO_generative_evaluation:
             prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
             prompt += "Conclude with your assessment for each caption and state your final answer as 'A' or 'B', "
             prompt += "based on which caption scores better across these criteria.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
@@ -253,6 +255,8 @@ class ARO_generative_evaluation:
             prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of each caption? \n"
             prompt += "3. Depth of Description: Consider which caption provides a deeper and more comprehensive description of the image. \n"
             prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'A' or 'B'.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
@@ -264,6 +268,8 @@ class ARO_generative_evaluation:
             prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
             prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
             prompt += "Conclude with your final, consistent decision on the best caption and a summary of your reasoning across all cycles.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
