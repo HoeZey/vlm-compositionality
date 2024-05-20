@@ -198,14 +198,25 @@ class ARO_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        # elif self.prompt_name == "cot": #Chain of Thought Prompting
-        #     prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"A or B\", then give a short explanation.\n"
-        #     prompt += "A. " + caption_0 + "\n"
-        #     prompt += "B. " + caption_1 + "\n"  
-        #     prompt += "ASSISTANT:"
-        #     max_new_tokens = 50
+        elif self.prompt_name == "cot": #Chain of Thought Prompting (Old Version)
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"A or B\", then give a short explanation.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 50
 
-        elif self.prompt_name == "cot":  # Chain of Thought Prompting
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 1)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B)," 
+            "which caption is the better description of the given image? Analyze each caption against the image." 
+            "Begin by describing the key elements visible in the image. Compare these elements with the details mentioned in each caption to determine which one matches better." 
+            "Answer by stating your choice between 'A' or 'B', then explicitly print the chosen caption, and follow with a detailed explanation of why that caption fits best.\n")
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT: Chosen Caption: {Chosen caption here}. Explanation: {Provide a detailed explanation here}."
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
             prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
               "which caption is the better description of the given image? Think step-by-step "
               "and analyze each caption against the image. Begin by describing the key elements "
@@ -215,6 +226,34 @@ class ARO_generative_evaluation:
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Evaluate each caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does each caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in each caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as 'A' or 'B', "
+            prompt += "based on which caption scores better across these criteria.\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects as you compare each caption.\n"
+                    "Start by commenting on the general accuracy and relevance of both captions: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on each caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of each caption? \n"
+            prompt += "3. Depth of Description: Consider which caption provides a deeper and more comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'A' or 'B'.\n"
+            prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
 
