@@ -441,12 +441,12 @@ class ARO_generative_evaluation:
                 correct_cnt += correct
 
                 iter_cnt += 1
-                if iter_cnt >= idx_limit:
-                    iter_cnt = 0
-                    break
+            #     if iter_cnt >= idx_limit:
+            #         iter_cnt = 0
+            #         break
                 
-            count = idx_limit
-            accuracy = correct_cnt / count 
+            # count = idx_limit
+            accuracy = correct_cnt / iter_cnt 
             metrics[dataset_name] = accuracy
 
         print(metrics)
