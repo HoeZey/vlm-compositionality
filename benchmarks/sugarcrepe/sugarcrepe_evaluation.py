@@ -138,6 +138,29 @@ class SugarCrepe_generative_evaluation:
         output = output.split('ASSISTANT:')[1].strip()
         print(output)
         return output
+
+    @torch.no_grad()
+    def llava_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        else:
+            print("Prompt type not supported!")
+        
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+        
+        # Contrast logits
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A'
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B'
+
+        return a_logits, b_logits
+    
     
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1):
@@ -211,22 +234,49 @@ class SugarCrepe_generative_evaluation:
         elif self.model_name == "THUDM/cogvlm-chat-hf":
             captioner = self.cogvlm_caption_choice
 
-        for c, data_dict in sugarcrepe.items():
-            correct_cnt = 0
-            idx_limit = 20
-            iter_cnt = 0
-            for data in tqdm(data_dict, desc=f'evaluating {c}'):
-                correct = 0
-                answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
-                if answer[0].lower() == 'a':
-                    correct = 1
-                correct_cnt += correct
-                iter_cnt += 1
-                if iter_cnt >= idx_limit:
-                    break
-            # count = len(data_dict)
-            count = idx_limit
-            metrics[c] = correct_cnt / count
-            
-        print(metrics)
-        return {"SugarCrepe_accuracies": metrics}
+        if self.evaluation_type == "logits":
+            if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                captioner = self.llava_caption_logits
+            # elif self.model_name == "Salesforce/blip2-opt-2.7b":
+            #     captioner = self.blip2_caption_choice
+            # elif self.model_name == "THUDM/cogvlm-chat-hf":
+            #     captioner = self.cogvlm_caption_choice
+            for c, data_dict in sugarcrepe.items():
+                correct_cnt = 0
+                idx_limit = 20
+                iter_cnt = 0
+                for data in tqdm(data_dict, desc=f'evaluating {c}'):
+                    correct = 0
+                    answerA, answerB = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
+                    if answerA > answerB:
+                        correct = 1
+                    correct_cnt += correct
+                    iter_cnt += 1
+                    if iter_cnt >= idx_limit:
+                        break
+                # count = len(data_dict)
+                count = idx_limit
+                metrics[c] = correct_cnt / count
+                
+            print(metrics)
+            return {"SugarCrepe_accuracies": metrics}
+        else:
+            for c, data_dict in sugarcrepe.items():
+                correct_cnt = 0
+                idx_limit = 20
+                iter_cnt = 0
+                for data in tqdm(data_dict, desc=f'evaluating {c}'):
+                    correct = 0
+                    answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
+                    if answer[0].lower() == 'a':
+                        correct = 1
+                    correct_cnt += correct
+                    iter_cnt += 1
+                    if iter_cnt >= idx_limit:
+                        break
+                # count = len(data_dict)
+                count = idx_limit
+                metrics[c] = correct_cnt / count
+                
+            print(metrics)
+            return {"SugarCrepe_accuracies": metrics}

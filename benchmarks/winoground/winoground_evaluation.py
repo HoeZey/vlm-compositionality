@@ -576,13 +576,13 @@ class Winoground_generative_evaluation:
 
 
         # Contrastive step
-        lm = self.model.language_model.model(**inputs)
-        print("lm", lm)
+        # lm = self.model.language_model.model(**inputs)
+        # print("lm", lm)
 
-        outputs = self.model(**inputs)
-        print("outs keys", outputs.keys())
-        logits = outputs.logits
-        print("logits", logits.shape)
+        # outputs = self.model(**inputs)
+        # print("outs keys", outputs.keys())
+        # logits = outputs.logits
+        # print("logits", logits.shape)
 
         # Generate
         gen_kwargs = {"max_length": 2048,
@@ -628,14 +628,28 @@ class Winoground_generative_evaluation:
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 50
 
+        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        inputs = {
+            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+        }
+        if 'cross_images' in input_by_model and input_by_model['cross_images']:
+            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
 
 
-        if self.prompt_name == "few-shot":
-            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
-        else:
-            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # if self.prompt_name == "few-shot":
+        #     inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        # else:
+        #     inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        yes_logits = torch.mean(logits[:, 22483])
+        no_logtis = torch.mean(logits[:, 1939])
 
+        return yes_logits
 
     def evaluate_winoground(self):
 
@@ -648,7 +662,7 @@ class Winoground_generative_evaluation:
         random.seed(2023)
         # subset_idx = random.sample(range(len(winoground)), 300)
         subset_idx = range(len(winoground))
-        # len(subset_idx[:20])
+        # subset_idx = subset_idx[:20]
         #taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
@@ -676,8 +690,8 @@ class Winoground_generative_evaluation:
                 # elif self.model_name == "Salesforce/blip2-opt-2.7b":
                 #     captioner = self.BLIP2_image_to_caption_binary_match
                 
-                # elif self.model_name == "THUDM/cogvlm-chat-hf":
-                #     captioner = self.cogvlm_image_to_caption_binary_match
+                elif self.model_name == "THUDM/cogvlm-chat-hf":
+                    captioner = self.cogvlm_image_to_caption_logits
                 
                 
                 result["c0_i0"] = captioner(caption_0, image_0)
