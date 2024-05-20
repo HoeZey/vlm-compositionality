@@ -198,7 +198,7 @@ class ARO_generative_evaluation:
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
-        elif self.prompt_name == "cot": #Chain of Thought Prompting (Old Version)
+        elif self.prompt_name == "old-cot": #Chain of Thought Prompting (Old Version)
             prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"A or B\", then give a short explanation.\n"
             prompt += "A. " + caption_0 + "\n"
             prompt += "B. " + caption_1 + "\n"  
@@ -216,7 +216,7 @@ class ARO_generative_evaluation:
             max_new_tokens = 500
 
 
-        elif self.prompt_name == "cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
             prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
               "which caption is the better description of the given image? Think step-by-step "
               "and analyze each caption against the image. Begin by describing the key elements "
@@ -229,7 +229,7 @@ class ARO_generative_evaluation:
             max_new_tokens = 500
 
 
-        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
             prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
                     "which caption is the better description of the given image? Evaluate each caption "
                     "based on the following criteria: Relevance to the image, accuracy of the details, "
@@ -243,7 +243,7 @@ class ARO_generative_evaluation:
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
-        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
             prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
                     "which caption is the better description of the given image? Begin your analysis by identifying "
                     "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
@@ -256,6 +256,16 @@ class ARO_generative_evaluation:
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
 
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate each caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'A' or 'B'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the best caption and a summary of your reasoning across all cycles.\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
 
         elif self.prompt_name == "few-shot": #Inspect & Adjust this
             prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
