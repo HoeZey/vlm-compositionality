@@ -151,7 +151,7 @@ class Winoground_generative_evaluation:
         # len(subset_idx[:20])
         #taking the first 20 for time purposes
         # subset_idx = subset_idx[:8]
-        self.fewshot_data = fewshot_data
+        self.fewshot_data = fewshot_data[:n_shot]
         
         # self.pretrained = pretrained
             
