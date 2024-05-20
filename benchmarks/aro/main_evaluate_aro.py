@@ -197,8 +197,46 @@ class ARO_generative_evaluation:
             prompt += "Given an image and two candidate captions, which caption is the better description of the given image? Give the final answer in the exact format of \"The answer is 1./2..\"\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+
+        # elif self.prompt_name == "cot": #Chain of Thought Prompting
+        #     prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"A or B\", then give a short explanation.\n"
+        #     prompt += "A. " + caption_0 + "\n"
+        #     prompt += "B. " + caption_1 + "\n"  
+        #     prompt += "ASSISTANT:"
+        #     max_new_tokens = 50
+
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as 'A' or 'B'.\n")
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "few-shot": #Inspect & Adjust this
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            fewshot_images = []
+            for x in self.fewshot_data:
+                c0, c1 = x['caption_0'], x['caption_1']
+                fewshot_images.append(x['image_0'])
+                fewshot_images.append(x['image_1'])
+                prompt += f"<image>. Caption: {c0.strip()}. ASSISTANT: <answer>\n"
+                prompt += f"<image>. Caption: {c1.strip()}. ASSISTANT: <answer>\n"
+            prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 1
+
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+
+        if self.prompt_name == "few-shot":
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
-            print("Prompt type not supported!")
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
         
         inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
@@ -222,9 +260,11 @@ class ARO_generative_evaluation:
         else:
             print("Prompt type not supported!")
         
-        prompts = [prompt] * image.size(0)
+        # prompts = [prompt] * image.size(0) #old version used when I tried the batching method 
 
-        inputs = self.processor(text=prompts, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompts, images=image, return_tensors="pt").to(self.device)
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
 
         # print("Number of prompts:", len(prompts))
         # print("Text input shape:", inputs['input_ids'].shape)
@@ -269,15 +309,15 @@ class ARO_generative_evaluation:
         output = output.split("</s>")[0]
         return output
 
-    def image_preprocess(self,image):
-        # Check if the image is already a tensor
-        if not isinstance(image, torch.Tensor):
-            # Convert PIL Image or ndarray to tensor
-            image = transforms.functional.to_tensor(image)
+    # def image_preprocess(self,image):
+    #     # Check if the image is already a tensor
+    #     if not isinstance(image, torch.Tensor):
+    #         # Convert PIL Image or ndarray to tensor
+    #         image = transforms.functional.to_tensor(image)
 
-        # Normalize the image tensor
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        return normalize(image)
+    #     # Normalize the image tensor
+    #     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    #     return normalize(image)
     
 
     def evaluate_aro(self):
@@ -334,7 +374,10 @@ class ARO_generative_evaluation:
                         
                         # print(f"Debug: Captions {captions}")
                         # print("Shape of img_tensor before passing to model:", img_tensor.shape)
-                print("CAPTIONS!!, ", caption_options[0], caption_options[1])
+                        
+                # print('-'*100)
+                # print("Available captions:\n" + caption_options[0] + "\n" + caption_options[1])
+                # print("Model's Answer:\n")
                 answer = captioner(image_options[0], caption_options[0], caption_options[1])
                 if answer[0].lower() == 'a':
                     correct = 1
