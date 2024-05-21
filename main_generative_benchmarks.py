@@ -26,8 +26,8 @@ _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
-BENCHMARKS_LIST = ["winoground"]
-# BENCHMARKS_LIST = ["sugarcrepe"]
+# BENCHMARKS_LIST = ["winoground"]
+BENCHMARKS_LIST = ["sugarcrepe"]
 # BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
@@ -54,7 +54,10 @@ def main(_A: argparse.Namespace):
         PROMPT_LIST = ["cbe-cot"]
 
     if _A.evaluation_type == "logits":
-        PROMPT_LIST = ["gpt4-smallerprompt"]
+        if BENCHMARKS_LIST == ["winoground"]:
+            PROMPT_LIST = ["gpt4-smallerprompt"]
+        else: 
+            PROMPT_LIST = ["gpt4-shorterprompt"]
     
     
     for model_name in _A.model_list: 
@@ -89,7 +92,7 @@ def main(_A: argparse.Namespace):
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged
-            project="cot_exp",
+            project="full_datasets",
             entity="fomo-vlm-comp",
             # track hyperparameters and run metadata
             config={
