@@ -439,8 +439,8 @@ class Winoground_generative_evaluation:
         
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        yes_logits = torch.mean(logits[:, 22483])
-        no_logtis = torch.mean(logits[:, 1939])
+        yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+        no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
         
         # print("yes_logits", yes_logits.shape)
         # print("no_logits", no_logtis.shape)
@@ -558,41 +558,43 @@ class Winoground_generative_evaluation:
             prompt += caption.strip() + "?"
             prompt += "Answer:"
             max_new_tokens = 35
-
+            
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
         ##icl arises form data
         ##why BLIP2 fails? dataset
 
         # self.model.to(device)
         inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
-        #contrastive:
-        tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+        # contrastive:
+        use_auth_token = "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"
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
         prompt = "Yes"
         inputs_language = tokenizer(prompt, return_tensors="pt")
         print("inputs_language", inputs_language)
-        
-        lm_hidden_state = self.model.language_model.model(**inputs_language)
-        print("Language Model hidden state shape", lm_hidden_state[0].squeeze().shape)
-    
 
-        # # get the logits
-        # if self.contrastive:
+        use_auth_token = "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"
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        prompt = "No"
+        inputs_language = tokenizer(prompt, return_tensors="pt")
+        print("inputs_language", inputs_language)
+
         outputs = self.model(**inputs)
-        logits = outputs.logits
-        # vision_out = outputs.vision_outputs
-        vision_out = outputs.qformer_outputs
-        lm_outs = outputs.language_model_outputs
+        logits = outputs.logits.squeeze()
 
-        print("vision_out shape", outputs.qformer_outputs.shape)
-        print("lm out shape", outputs.language_model_outputs.shape)
+        # print("logits.shape", logits.shape)
+        yes_logits = torch.mean(logits[:, 2748]) ## 1037 is the token id for 'A' based on bert tokenizer
+        no_logits = torch.mean(logits[:, 2053]) ## 1038 is the token id for 'B' based on bert tokenizer
+        # print("a_logits", a_logits)
+        # print("b_logits", b_logits)
+        # print("a_logits.shape", a_logits.shape)
+        # print("b_logits.shape", b_logits.shape)
 
-        # Generate
-        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-        # print("generate_ids.logits", generate_ids.logits)
-        output = self.processor.decode(generate_ids[0], skip_special_tokens=True)
-        # print("output.logits", output.logits)
-        # output = output.split('Answer:')[1]
-        return output
+        return yes_logits
     
     @torch.no_grad()
     def cogvlm_image_to_caption_binary_match(self, caption, image):
@@ -704,8 +706,8 @@ class Winoground_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        yes_logits = torch.mean(logits[:, 22483])
-        no_logtis = torch.mean(logits[:, 1939])
+        yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+        no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
 
         return yes_logits
 
@@ -718,9 +720,9 @@ class Winoground_generative_evaluation:
 
         ##images are all winoground images
         random.seed(2023)
-        # subset_idx = random.sample(range(len(winoground)), 300)
-        subset_idx = range(len(winoground))
-        # subset_idx = subset_idx[:20]
+        subset_idx = random.sample(range(len(winoground)), 300)
+        # subset_idx = range(len(winoground))
+        subset_idx = subset_idx[:20]
         #taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
@@ -745,8 +747,8 @@ class Winoground_generative_evaluation:
                 if self.model_name == "llava-hf/llava-1.5-7b-hf":
                     captioner = self.llava_image_to_caption_logits
 
-                # elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                #     captioner = self.BLIP2_image_to_caption_binary_match
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    captioner = self.BLIP2_image_to_caption_logits
                 
                 elif self.model_name == "THUDM/cogvlm-chat-hf":
                     captioner = self.cogvlm_image_to_caption_logits

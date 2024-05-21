@@ -26,8 +26,8 @@ _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
-# BENCHMARKS_LIST = ["winoground"]
-BENCHMARKS_LIST = ["sugarcrepe"]
+BENCHMARKS_LIST = ["winoground"]
+# BENCHMARKS_LIST = ["sugarcrepe"]
 # BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16

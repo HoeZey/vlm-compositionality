@@ -3,6 +3,8 @@ import torch
 import open_clip
 from datasets import load_dataset
 
+from transformers import AutoTokenizer, LlamaForCausalLM, BertTokenizer
+
 
 class SugarCrepe_evaluation:
     """
@@ -156,8 +158,8 @@ class SugarCrepe_generative_evaluation:
         # Contrast logits
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A'
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B'
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits
     
@@ -181,6 +183,45 @@ class SugarCrepe_generative_evaluation:
         print(output)
         return output
     
+    @torch.no_grad()
+    def blip2_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: \n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        else:
+            print("Prompt type not supported!")
+
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+        # use_auth_token = "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"
+        # tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        # prompt = "A"
+        # inputs_language = tokenizer(prompt, return_tensors="pt")
+        # print("inputs_language", inputs_language)
+
+        # use_auth_token = "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"
+        # tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        # prompt = "B"
+        # inputs_language = tokenizer(prompt, return_tensors="pt")
+        # print("inputs_language", inputs_language)
+
+
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+
+        # print("logits.shape", logits.shape)
+        a_logits = torch.mean(logits[:, 1037]) ## 1037 is the token id for 'A' based on bert tokenizer
+        b_logits = torch.mean(logits[:, 1038]) ## 1038 is the token id for 'B' based on bert tokenizer
+        print("a_logits", a_logits)
+        print("b_logits", b_logits)
+        print("a_logits.shape", a_logits.shape)
+        print("b_logits.shape", b_logits.shape)
+
+        return a_logits, b_logits        
+
     @torch.no_grad()
     def cogvlm_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
@@ -237,8 +278,8 @@ class SugarCrepe_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A'
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B'
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits        
 
@@ -266,8 +307,8 @@ class SugarCrepe_generative_evaluation:
         if self.evaluation_type == "logits":
             if self.model_name == "llava-hf/llava-1.5-7b-hf":
                 captioner = self.llava_caption_logits
-            # elif self.model_name == "Salesforce/blip2-opt-2.7b":
-            #     captioner = self.blip2_caption_choice
+            elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                captioner = self.blip2_caption_logits
             elif self.model_name == "THUDM/cogvlm-chat-hf":
                 captioner = self.cogvlm_caption_logits
             for c, data_dict in sugarcrepe.items():
