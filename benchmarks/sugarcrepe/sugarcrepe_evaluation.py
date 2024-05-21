@@ -278,6 +278,35 @@ class SugarCrepe_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A'
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B'
+
+        return a_logits, b_logits        
+
+
+    @torch.no_grad()
+    def cogvlm_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+        else:
+            print("Prompt type not supported!")
+        
+        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        inputs = {
+            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+        }
+        if 'cross_images' in input_by_model and input_by_model['cross_images']:
+            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
         a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
         b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
@@ -307,10 +336,10 @@ class SugarCrepe_generative_evaluation:
         if self.evaluation_type == "logits":
             if self.model_name == "llava-hf/llava-1.5-7b-hf":
                 captioner = self.llava_caption_logits
-            elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                captioner = self.blip2_caption_logits
-            elif self.model_name == "THUDM/cogvlm-chat-hf":
-                captioner = self.cogvlm_caption_logits
+            # elif self.model_name == "Salesforce/blip2-opt-2.7b":
+            #     captioner = self.blip2_caption_choice
+            # elif self.model_name == "THUDM/cogvlm-chat-hf":
+            #     captioner = self.cogvlm_caption_choice
             for c, data_dict in sugarcrepe.items():
                 correct_cnt = 0
                 idx_limit = 20
