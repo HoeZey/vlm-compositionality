@@ -744,7 +744,7 @@ class Winoground_generative_evaluation:
                 result = {}
                 # try:
                 ## map string results to nemurical
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                if self.model_name == "llava-hf/llava-1.5-7b-hf": 
                     captioner = self.llava_image_to_caption_logits
 
                 elif self.model_name == "Salesforce/blip2-opt-2.7b":
