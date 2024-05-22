@@ -1,0 +1,188 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=DownloadVLC
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=04:00:00
+#SBATCH --output=outputs/download_vlc/download_vlc_output_%A.out
+
+module purge
+module load 2022
+module load Anaconda3/2022.05
+
+cd $HOME/vlm-compositionality/benchmarks/dci/
+# conda env create -f environment.yml
+source activate fomo-vlm-comp
+pip install gdown aiohttp aiofiles
+
+# --------------------------------------------------------
+# Download images for HAKE Dataset.
+# --------------------------------------------------------
+# TODO all drive links should have checksums
+
+if [ ! -d data/hake ];then
+    mkdir data/hake
+fi
+if [ ! -d data/hake/images ];then
+    mkdir data/hake/images
+fi
+cd data/hake
+
+# ---------------V-COCO Dataset--------------------
+echo "========================================================="
+echo "Downloading V-COCO Dataset"
+echo "========================================================="
+
+URL_2017_Train_images=http://images.cocodataset.org/zips/train2017.zip
+URL_2017_Val_images=http://images.cocodataset.org/zips/val2017.zip
+#URL_2017_Test_images=http://images.cocodataset.org/zips/test2017.zip
+
+echo "Downloading train"
+wget -nv -N $URL_2017_Train_images
+echo "Downloading val"
+wget -nv -N $URL_2017_Val_images
+#wget -N $URL_2017_Test_images
+
+if [ ! -d vcoco ];then
+    mkdir vcoco
+fi
+
+echo "Unzipping train"
+unzip -q train2017.zip -d vcoco/
+echo "Unzipping val"
+unzip -q val2017.zip -d vcoco/
+#unzip test2017.zip -d vcoco/
+
+rm train2017.zip
+rm val2017.zip
+#rm test2017.zip
+
+echo "V-COCO Dataset Downloaded!"
+
+# ---------------HICO-DET Dataset-------------------
+echo "========================================================="
+echo "Downloading HICO-DET Dataset"
+echo "========================================================="
+
+# source: https://github.com/YueLiao/CDN#hico-det
+gdown 1dUByzVzM6z1Oq4gENa1-t0FLhr0UtDaS -O hico_20160224_det.tar.gz
+tar -xzf hico_20160224_det.tar.gz -C ./
+rm hico_20160224_det.tar.gz
+
+echo "HICO-DET Dataset Downloaded!"
+
+
+# ---------------hcvrd Dataset(visual genome)-------
+echo "========================================================="
+echo "Downloading HCVRD(part) Dataset"
+echo "========================================================="
+if [ ! -d hcvrd ];then
+    mkdir hcvrd
+fi
+# source: https://github.com/DirtyHarryLYL/HAKE/blob/master/Images/download_image/hcvrd_url.json
+srun python $HOME/vlm-compositionality/benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/download.py 'vlm-compositionality/benchmarks/dci/reproduction/densely_captioned_images/repro/setup_data/hcvrd_url.json' ./hcvrd/
+
+echo "HCVRD(part) Dataset Downloaded!"
+
+
+# ---------------openimages Dataset------------------
+
+echo "========================================================="
+echo "Downloading openimages(part) Dataset"
+echo "========================================================="
+
+# source: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
+gdown 1XTWYLyL1h-9jJ49dsXmtRCv8GcupVrvM -O openimages.tar.gz
+tar -xzf openimages.tar.gz -C ./
+rm openimages.tar.gz
+
+echo "openimages(part) Dataset Downloaded!"
+
+# ---------------pic Dataset-------------------------
+
+echo "========================================================="
+echo "Downloading pic Dataset"
+echo "========================================================="
+
+# source: https://picdataset.com/challenge/task/download/
+gdown 1fBJh0mdWhOkOyN5X8is7a2MDb2CE7eCw -O pic.tar.gz
+tar -xzf pic.tar.gz -C ./
+rm pic.tar.gz
+mkdir pic
+mv image/val/* pic
+mv image/train/* pic
+rm -rf image
+
+echo "pic Dataset Downloaded!"
+
+# ---------------hake uploads-------------------------
+
+Sources: https://github.com/DirtyHarryLYL/HAKE/tree/master/Images#how-to-download-images
+echo "========================================================="
+echo "Downloading hake Dataset 1"
+echo "========================================================="
+
+gdown 18R_3Oz7zO1knEjagY6sfUkQ1_6wZf0Ei -O hake_images_20190730.tar.gz
+tar -xzf hake_images_20190730.tar.gz -C ./
+rm hake_images_20190730.tar.gz
+
+echo "hake part 1 Dataset Downloaded!\n"
+
+echo "========================================================="
+echo "Downloading hake Dataset 2"
+echo "========================================================="
+
+gdown 14K_4FfjviJNDVLJdGM96W2ZLN55dDb2- -O hake_images_20200614.tar.gz
+tar -xzf hake_images_20200614.tar.gz -C ./
+rm hake_images_20200614.tar.gz
+
+echo "hake part 2 Dataset Downloaded!"
+
+# ---------------SWiG-------------------------
+echo "========================================================="
+echo "Setting up SWiG"
+echo "========================================================="
+cd ..
+mkdir swig
+
+# source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#swig
+echo "Downloading SWiG"
+wget -nv -N  https://swig-data-weights.s3.us-east-2.amazonaws.com/images_512.zip
+echo "Unzipping SWiG"
+unzip -q images_512.zip -d ./
+rm images_512.zip
+mv images_512 swig
+
+echo "SWiG Downloaded!"
+
+# ---------------VG-------------------------
+echo "========================================================="
+echo "Setting up Visual Genome"
+echo "========================================================="
+
+mkdir vg
+mkdir vg/VG_100K
+mkdir vg/VG_100K_2
+
+# source: https://github.com/om-ai-lab/VL-CheckList/blob/main/DATASETS.md#vg--vaw
+echo "Downloading VG p1"
+wget -nv -N https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip
+echo "Downloading VG p2"
+wget -nv -N https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip
+
+echo "Unzipping VG p1"
+unzip -q images.zip -d vg/
+echo "Unzipping VG p2"
+unzip -q images2.zip -d vg/
+rm images.zip
+rm images2.zip
+
+echo "Visual Genome Downloaded!"
+
+# ----- clear any files that didn't download correctly -----
+
+echo "Removing improperly downloaded/missing files"
+find . -size 0 -type f -name "*.jpg" -print -delete
+echo "Files processed, remaining are VL-Checklist-usable"

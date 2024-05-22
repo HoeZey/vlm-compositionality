@@ -46,7 +46,7 @@ benchmarks/winoground/__pycache__/
 benchmarks/winoground/wandb/
 benchmarks/winoground/PATH/
 
-jobs/
+# jobs/
 datasets/
 outputs/
 .cache/
