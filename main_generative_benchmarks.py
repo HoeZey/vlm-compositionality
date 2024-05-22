@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 _AA = parser.add_argument
 
 _AA("--model_list", nargs='+', help="List of models to evaluate.")
+_AA("--aro_subsets", nargs='+', default=None, help="List of ARO subsets to evaluate.")
 _AA("--evaluation_type", help="Evaluation mode to activate. Accuracy overall or text/image/group scores.")
 _AA("--no_hard_negatives", help="Evaluation mode in which caption and image pairs are swapped with ones from different examples.")
 _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.")
@@ -36,6 +37,8 @@ TORCH_TYPE = torch.bfloat16
 def main(_A: argparse.Namespace):
 
     print(f"Model list: {_A.model_list}")
+    if _A.aro_subsets is not None:
+        print(f"ARO subsets: {_A.aro_subsets}")
     if _A.evaluation_type == "accuracy_score":
         # PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
         # PROMPT_LIST = ["gpt4-moretokens"]
@@ -120,7 +123,7 @@ def main(_A: argparse.Namespace):
 
                 elif benchmark == "aro":
                     benchmark_module = ARO_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
-                    eval_results = benchmark_module.evaluate_aro()
+                    eval_results = benchmark_module.evaluate_aro(subsets=_A.aro_subsets)
                     wandb.log({'ARO_VG_R' : eval_results['ARO_accuracies']['VG_Relation' ]})
                     wandb.log({'ARO_VG_A' : eval_results['ARO_accuracies']['VG_Attribution']})
                     wandb.log({'ARO_coco': eval_results['ARO_accuracies' ]['COCO_Order']})

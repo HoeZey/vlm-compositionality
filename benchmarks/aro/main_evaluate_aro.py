@@ -366,13 +366,12 @@ class ARO_generative_evaluation:
         return output
     
 
-    def evaluate_aro(self, resume_from_checkpoint=True):
+    def evaluate_aro(self, subsets, resume_from_checkpoint=True):
+        print(subsets)
         seed = 1
         seed_all(seed)
 
-        # dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
-        # dataset_names = ["VG_Relation", "VG_Attribution"]
-        dataset_names =["COCO_Order", "Flickr30k_Order"]
+        dataset_names = subsets
         download = True
         batch_size = 1
         num_workers = 0 #chnage this to 4 when finished debugging
