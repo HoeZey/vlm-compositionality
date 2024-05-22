@@ -8,6 +8,7 @@ from datasets import load_dataset
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import random
+import re
 
 from transformers import LlamaTokenizerFast
 
@@ -152,6 +153,125 @@ class Winoground_generative_evaluation:
         #taking the first 20 for time purposes
         # subset_idx = subset_idx[:8]
         self.fewshot_data = fewshot_data[:n_shot]
+
+        ## Retrieval augmented generation
+        
+        
+        im1 = Image.open(
+        requests.get(
+            "http://images.cocodataset.org/val2017/000000039769.jpg", stream=True
+            ).raw
+        )
+        im2 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028137.jpg",
+                stream=True
+            ).raw
+        )
+        im3 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028352.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im4 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000442.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im5 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000448.jpg", 
+                stream=True
+            ).raw
+        )
+
+        caption_1 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
+        caption_2 = "A bathroom with a sink, cabinet, mirror and a shower curtain."
+        caption_3 = "A table full of salty and sweet food inside a cozy room."
+        caption_4 = "A room full of compute screens and some people working on them."
+        caption_5 = "A group of women talking about environmental issues while sitting at a table."
+
+        
+
+        rag_fewshot = []
+        rag_fewshot.append({"image": im1, "caption": caption_1})
+        rag_fewshot.append({"image": im2, "caption": caption_2})
+        rag_fewshot.append({"image": im3, "caption": caption_3})
+        rag_fewshot.append({"image": im4, "caption": caption_4})
+        rag_fewshot.append({"image": im5, "caption": caption_5})
+
+        self.rag_fewshot = rag_fewshot
+
+        ## Retrieval augmented generation with negatives
+
+        im1 = Image.open(
+        requests.get(
+            "http://images.cocodataset.org/test-stuff2017/000000000870.jpg", stream=True
+            ).raw
+        )
+        im2 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000527.jpg",
+                stream=True
+            ).raw
+        )
+        im3 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001227.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im4 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001331.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im5 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001574.jpg", 
+                stream=True
+            ).raw
+        )
+
+        caption_1 = "The giraffe is on top of the trees."
+        caption_2 = "The zebra is outside the cage."
+        caption_3 = "The kite is carrying the lady."
+        caption_4 = "The ball is in the air, and the boys are running from it."
+        caption_5 = "The computer is under the shelf."
+
+        rag_fewshot_negatives = []
+        rag_fewshot_negatives.append({"image": im1, "caption": caption_1})
+        rag_fewshot_negatives.append({"image": im2, "caption": caption_2})
+        rag_fewshot_negatives.append({"image": im3, "caption": caption_3})
+        rag_fewshot_negatives.append({"image": im4, "caption": caption_4})
+        rag_fewshot_negatives.append({"image": im5, "caption": caption_5})
+
+        self.rag_fewshot_negatives = rag_fewshot_negatives
+
+
+        # rag_fewshot["example"]
+        # rag_fewshot["image_1"] = im1
+        # rag_fewshot["image_2"] = im2
+        # rag_fewshot["image_3"] = im3
+        # rag_fewshot["image_4"] = im4
+        # rag_fewshot["image_5"] = im5
+        # rag_fewshot["caption_1"] = caption_1
+        # rag_fewshot["caption_2"] = caption_2
+        # rag_fewshot["caption_3"] = caption_3
+        # rag_fewshot["caption_4"] = caption_4
+        # rag_fewshot["caption_5"] = caption_5
+
+
+
+
+
         
         # self.pretrained = pretrained
             
@@ -260,10 +380,68 @@ class Winoground_generative_evaluation:
             prompt = "USER: Does the following image match the caption?. Answer in the format of \"Yes or No.\"\n"
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 3
-        elif self.prompt_name == "cot":
-            prompt = "USER: Does the following image match the caption?. Pay close attention to the word order. Think step-by-step. Answer in the format of \"Yes or No.\", then give a short explanation.\n"
-            prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
-            max_new_tokens = 50
+        
+        elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 1)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image." 
+            "Begin by describing the key elements visible in the image. Compare these elements with the details mentioned in the caption." 
+            "Answer by stating your choice between 'yes' or 'no', and follow with a detailed explanation of why that caption fits best.\n")
+            prompt += "Caption:" + caption.strip() + "\n"
+            prompt += "ASSISTANT: Answer: {Answer caption here}. Explanation: {Provide a detailed explanation here}."
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as 'Yes' or 'No'.\n")
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Evaluate the caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does the caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in the caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as 'Yes' or 'No', "
+            prompt += "based on the caption score across these criteria.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects.\n"
+                    "Start by commenting on the general accuracy and relevance of the caption: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on the caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of the caption? \n"
+            prompt += "3. Depth of Description: Consider if the caption provides a comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'Yes' or 'No'.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate the caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'Yes' or 'No'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the caption and a summary of your reasoning across all cycles.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
 
         # elif self.prompt_name == "few-shot":
         #     prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
@@ -277,29 +455,51 @@ class Winoground_generative_evaluation:
         #     prompt += f"<image>. Caption: {caption.strip()}. ASSISTANT: "
         #     max_new_tokens = 1
 
+        elif self.prompt_name == "rag-few-shot":
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+
+            prompt += ("USER: \nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 10
+
+        elif self.prompt_name == "rag-few-shot-negatives":
+            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                # fewshot_images.append(x['image_1'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+
+            for x in self.rag_fewshot_negatives:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                # fewshot_images.append(x['image_1'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption does not match the image, the answer is <NO>.\n"
+
+            prompt += ("USER: \nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image> The description of the Image is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 10
+
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
 
-        if self.prompt_name == "few-shot":
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
-
-        # outputs = self.model(**inputs)
-        # hidden_states = outputs.hidden_states
-        # vision_hs = outputs.image_hidden_states
-        # vis = outputs.vision_outputs
-        # print("vis", vis)
-        # print("hidden_states", hidden_states)
-        # print("vision_hs", vision_hs)
-
-
-        # lm_out = self.model.language_model(**inputs)
-        # print("out emb", self.model.language_model.get_output_embeddings())
-        # print("in emb", self.model.language_model.get_input_embeddings())
-        # # print("lm_out embed", lm_out.get_output_embeddings())
-        # print("lm_out", lm_out["logits"].shape)
-        # print(lm_out.keys())
-
 
         # use_auth_token = "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"
         # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", use_auth_token=use_auth_token)
@@ -309,33 +509,13 @@ class Winoground_generative_evaluation:
         
         ##YES: id = 22483
         ##NO: id = 1939
-        # lm_hidden_state = self.model.language_model.model(**inputs_language)
-        # print("Language Model hidden state",lm_hidden_state[0])
-        # print("Language Model hidden state shape",lm_hidden_state[0].shape)
-        # print("language model", self.model.language_model)
-
-        # text_out = self.model.language_model.lm_head.weight
-        # lm_head = self.model.language_model.lm_head
-        # embed_tokens = self.model.language_model.embed_tokens
-        # print("embed_tokens", embed_tokens)
-        # print("language_model decoder", text_out.shape)
-        # print("lm_head", lm_head)
-
-        # outputs = self.model(**inputs)
-        # print("outs keys", outputs.keys())
-        # logits = outputs.logits.squeeze()
-        # yes_logits = torch.mean(logits[:, 22483])
-        # no_logtis = torch.mean(logits[:, 1939])
-        # # print("yes_logits", yes_logits.shape)
-        # # print("no_logits", no_logtis.shape)
-        # # print("logits", logits.shape)
-        # print("yes_logits", yes_logits) 
     
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
 
         
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        # print(output)
         output = output.split('ASSISTANT:')[1]
         return output    
 
@@ -381,8 +561,8 @@ class Winoground_generative_evaluation:
         
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        yes_logits = torch.mean(logits[:, 22483])
-        no_logtis = torch.mean(logits[:, 1939])
+        yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+        no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
         
         # print("yes_logits", yes_logits.shape)
         # print("no_logits", no_logtis.shape)
@@ -500,41 +680,43 @@ class Winoground_generative_evaluation:
             prompt += caption.strip() + "?"
             prompt += "Answer:"
             max_new_tokens = 35
-
+            
+        elif self.prompt_name == "gpt4-smallerprompt":
+            prompt = "Question: \n Select whether the image matches the caption. Pay close attention to the word order. Give the final answer in the exact format of: \"The answer is Yes/No.\"))\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 35
         ##icl arises form data
         ##why BLIP2 fails? dataset
 
         # self.model.to(device)
         inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
-        #contrastive:
-        tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+        # contrastive:
+        use_auth_token = "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"
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
         prompt = "Yes"
         inputs_language = tokenizer(prompt, return_tensors="pt")
         print("inputs_language", inputs_language)
-        
-        lm_hidden_state = self.model.language_model.model(**inputs_language)
-        print("Language Model hidden state shape", lm_hidden_state[0].squeeze().shape)
-    
 
-        # # get the logits
-        # if self.contrastive:
+        use_auth_token = "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"
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        prompt = "No"
+        inputs_language = tokenizer(prompt, return_tensors="pt")
+        print("inputs_language", inputs_language)
+
         outputs = self.model(**inputs)
-        logits = outputs.logits
-        # vision_out = outputs.vision_outputs
-        vision_out = outputs.qformer_outputs
-        lm_outs = outputs.language_model_outputs
+        logits = outputs.logits.squeeze()
 
-        print("vision_out shape", outputs.qformer_outputs.shape)
-        print("lm out shape", outputs.language_model_outputs.shape)
+        # print("logits.shape", logits.shape)
+        yes_logits = torch.mean(logits[:, 2748]) ## 1037 is the token id for 'A' based on bert tokenizer
+        no_logits = torch.mean(logits[:, 2053]) ## 1038 is the token id for 'B' based on bert tokenizer
+        # print("a_logits", a_logits)
+        # print("b_logits", b_logits)
+        # print("a_logits.shape", a_logits.shape)
+        # print("b_logits.shape", b_logits.shape)
 
-        # Generate
-        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-        # print("generate_ids.logits", generate_ids.logits)
-        output = self.processor.decode(generate_ids[0], skip_special_tokens=True)
-        # print("output.logits", output.logits)
-        # output = output.split('Answer:')[1]
-        return output
+        return yes_logits
     
     @torch.no_grad()
     def cogvlm_image_to_caption_binary_match(self, caption, image):
@@ -646,8 +828,8 @@ class Winoground_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        yes_logits = torch.mean(logits[:, 22483])
-        no_logtis = torch.mean(logits[:, 1939])
+        yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+        no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
 
         return yes_logits
 
@@ -660,9 +842,9 @@ class Winoground_generative_evaluation:
 
         ##images are all winoground images
         random.seed(2023)
-        # subset_idx = random.sample(range(len(winoground)), 300)
-        subset_idx = range(len(winoground))
-        # subset_idx = subset_idx[:20]
+        subset_idx = random.sample(range(len(winoground)), 300)
+        # subset_idx = range(len(winoground))
+        subset_idx = subset_idx[:20]
         #taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
@@ -684,11 +866,11 @@ class Winoground_generative_evaluation:
                 result = {}
                 # try:
                 ## map string results to nemurical
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                if self.model_name == "llava-hf/llava-1.5-7b-hf": 
                     captioner = self.llava_image_to_caption_logits
 
-                # elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                #     captioner = self.BLIP2_image_to_caption_binary_match
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    captioner = self.BLIP2_image_to_caption_logits
                 
                 elif self.model_name == "THUDM/cogvlm-chat-hf":
                     captioner = self.cogvlm_image_to_caption_logits
@@ -763,7 +945,9 @@ class Winoground_generative_evaluation:
                 ans_c0_i0 = captioner(caption_0, image_0)
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
-                if "yes" in ans_c0_i0[:10].lower():
+                                
+                match = re.search(' YES ', ans_c0_i0) or re.search('<YES>', ans_c0_i0)
+                if match:
                     result["c0_i0"] = 1.0
                 else:
                     result["c0_i0"] = 0.0
@@ -771,10 +955,13 @@ class Winoground_generative_evaluation:
                 ans_c0_i1 = captioner(caption_0, image_1)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
-                if "yes" in ans_c0_i1[:10].lower():
-                    result["c0_i1"] = 1.0
+                match = re.search(' YES ', ans_c0_i0) or re.search('<YES>', ans_c0_i0)
+                if match:
+                    result["c0_i0"] = 1.0
                 else:
-                    result["c0_i1"] = 0.0   
+                    result["c0_i0"] = 0.0
+    
+
 
                 ans_c1_i0 = captioner(caption_1, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
@@ -804,77 +991,3 @@ class Winoground_generative_evaluation:
 
         
         return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
-        
-        # if self.evaluation_type == "accuracy_score":
-        #     correct = 0
-        #     total = 0
-        #     image_to_caption_results = {} ## for saving results
-
-        #     for idx in tqdm(subset_idx):
-        #         image_0 = winoground[idx]["image_0"]
-        #         image_1 = winoground[idx]["image_1"]
-        #         caption_0 = winoground[idx]["caption_0"]
-        #         caption_1 = winoground[idx]["caption_1"]
-        #         correct_a = False
-        #         correct_b = False
-
-        #         print ("Example: #", total)
-                
-        #         self.show_example(benchmark=winoground, idx=idx)
-
-        #         # try:
-        #         #     ## match caption for image_0
-        #         #     answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
-        #         #     image_to_caption_results[str(idx)+"_image_0"] = answer_0
-        #         #     print ("\nUsing image_0 to select the better caption: ")
-        #         #     print (answer_0)
-        #         #     if "answer is a" in answer_0.lower():
-        #         #         correct_a = True
-        #         #     print ("\n")
-
-        #         #     ## match caption for image_1
-        #         #     answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
-        #         #     image_to_caption_results[str(idx)+"_image_1"] = answer_1
-        #         #     print ("\nUsing image_1 to select the better caption: ")
-        #         #     print (answer_1)
-        #         #     if "answer is b" in answer_1.lower():
-        #         #         correct_b = True
-
-        #         #     ## the example is counted correct only if both matching are correct
-        #         #     if correct_a and correct_b:
-        #         #         correct += 1
-        #         #     total += 1
-
-        #         #     print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
-
-            
-        #         ## match caption for image_0
-        #         answer_0 = self.llava_image_to_caption(image_0, caption_0, caption_1)
-        #         image_to_caption_results[str(idx)+"_image_0"] = answer_0
-        #         print ("\nUsing image_0 to select the better caption: ")
-        #         print(answer_0)
-        #         print(answer_0[:4])
-        #         if "A." in answer_0[:4]:
-        #             correct_a = True
-        #         print ("\n")
-
-        #         ## match caption for image_1
-        #         answer_1 = self.llava_image_to_caption(image_1, caption_0, caption_1)
-        #         image_to_caption_results[str(idx)+"_image_1"] = answer_1
-        #         print("\nUsing image_1 to select the better caption: ")
-        #         print(answer_1)
-        #         print(answer_1[:4])
-        #         if "B." in answer_1[:4]:
-        #             correct_b = True
-
-        #         ## the example is counted correct only if both matching are correct
-        #         if correct_a and correct_b:
-        #             correct += 1
-        #         total += 1
-
-        #         print ("Current Acc: {}/{} = {}%\n".format(correct, total, correct / total * 100))
-        
-        #     return {"accuracy_score": correct / total}
-        
-        # else:
-        #     raise ValueError(f"Unknown evaluation type: {self.evaluation_type}")

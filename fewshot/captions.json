@@ -1,0 +1,22 @@
+{
+    "1": {
+        "img_1_1.jpg": "A mother kissing their child",
+        "img_1_2.jpg": "A child kissing their mother"
+    },
+    "2": {
+        "img_2_1.jpg": "A dog licking a cat's head",
+        "img_2_2.jpg": "A cat licking a dog's head"
+    },
+    "3": {
+        "img_3_1.jpg": "Water in a boat",
+        "img_3_2.jpg": "A boat in water"
+    },
+    "4": {
+        "img_4_1.jpg": "A cup on a pencil",
+        "img_4_2.jpg": "A pencil on a cup"
+    },
+    "5": {
+        "img_5_1.jpg": "A book on a hat",
+        "img_5_2.jpg": "A hat on a book"
+    }
+}
