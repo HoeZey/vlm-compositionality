@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append("..")
 
@@ -199,7 +200,7 @@ class ARO_generative_evaluation:
             max_new_tokens = 35
 
         elif self.prompt_name == "old-cot": #Chain of Thought Prompting (Old Version)
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"A or B\", then give a short explanation.\n"
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Pay close attention to the word order. Think step-by-step. Answer in the format of \"<A> or <B>\", then give a short explanation.\n"
             prompt += "A. " + caption_0 + "\n"
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
@@ -238,7 +239,7 @@ class ARO_generative_evaluation:
             prompt += "1. Relevance: How well does each caption relate to the key elements you have described? \n"
             prompt += "2. Accuracy: Are the details mentioned in each caption correct as per the image? \n"
             prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
-            prompt += "Conclude with your assessment for each caption and state your final answer as <A> or <B>, "
+            prompt += "Conclude with your assessment for each caption and state your final answer as '<A>' or '<B>', "
             prompt += "based on which caption scores better across these criteria.\n"
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
@@ -363,8 +364,9 @@ class ARO_generative_evaluation:
         print(output)
         output = output.split("</s>")[0]
         return output
+    
 
-    def evaluate_aro(self):
+    def evaluate_aro(self, resume_from_checkpoint=True):
         seed = 1
         seed_all(seed)
 
@@ -379,6 +381,7 @@ class ARO_generative_evaluation:
 
         if self.model_name == "llava-hf/llava-1.5-7b-hf":
             captioner = self.llava_caption_choice
+
         elif self.model_name == "Salesforce/blip2-opt-2.7b":
             captioner = self.blip2_caption_choice
         elif self.model_name == "THUDM/cogvlm-chat-hf":
@@ -397,47 +400,61 @@ class ARO_generative_evaluation:
             idx_limit = 20
             iter_cnt = 0
 
-            for example in tqdm(dataset):
-                image_options = example['image_options']
-                caption_options = example['caption_options']
+            model_name_short = self.model_name.split("/")[1].split('-')[0]
+            log_file_path = f'./outputs/log_run/{model_name_short}/{dataset_name}_log.csv'
+            
+            if os.path.exists(log_file_path) and resume_from_checkpoint:
+                with open(log_file_path, 'r') as f:
+                    start = int(f.readlines()[-1].split(',')[0]) + 1
+            else:
+                start = 0
 
-                # Debugging: Check batch content sizes
-                # print(f"Debug: Processing batch with {len(image_options)} images and {len(caption_options)} caption pairs.")
+            with(log_file_path, 'w') as f:
+                if not resume_from_checkpoint:
+                    f.write('id,correct')
+                for i, example in tqdm(enumerate(dataset[start:])):
+                    i += start
+                    image_options = example['image_options']
+                    caption_options = example['caption_options']
 
-                # Zip the image_options with caption_options
-                # for img_feature, captions in zip(image_options, caption_options):
-                    # img_feature is a BatchFeature object containing the 'pixel_values' key
-                    # Accessing the tensor(s) from the BatchFeature
-                    # # Assuming there is always at least one image per feature , accessing  the first
-                    # if img_feature['pixel_values']:  # Check if there are any pixel values
-                    #     img_tensor = img_feature['pixel_values'][0]
+                    # Debugging: Check batch content sizes
+                    # print(f"Debug: Processing batch with {len(image_options)} images and {len(caption_options)} caption pairs.")
 
-                    #     if img_tensor.min() < 0 or img_tensor.max() > 1:
-                    #         # print("Image tensor values are outside the expected range [0, 1].")
-                    #         # image_tensor = self.image_preprocess(img_tensor)
-                    #         # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                    #         img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
-                        
-                        # print(f"Debug: Captions {captions}")
-                        # print("Shape of img_tensor before passing to model:", img_tensor.shape)
-                        
-                # print('-'*100)
-                # print("Available captions:\n" + caption_options[0] + "\n" + caption_options[1])
-                # print("Model's Answer:\n")
+                    # Zip the image_options with caption_options
+                    # for img_feature, captions in zip(image_options, caption_options):
+                        # img_feature is a BatchFeature object containing the 'pixel_values' key
+                        # Accessing the tensor(s) from the BatchFeature
+                        # # Assuming there is always at least one image per feature , accessing  the first
+                        # if img_feature['pixel_values']:  # Check if there are any pixel values
+                        #     img_tensor = img_feature['pixel_values'][0]
+
+                        #     if img_tensor.min() < 0 or img_tensor.max() > 1:
+                        #         # print("Image tensor values are outside the expected range [0, 1].")
+                        #         # image_tensor = self.image_preprocess(img_tensor)
+                        #         # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
+                        #         img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
+                            
+                            # print(f"Debug: Captions {captions}")
+                            # print("Shape of img_tensor before passing to model:", img_tensor.shape)
+                            
+                    # print('-'*100)
+                    # print("Available captions:\n" + caption_options[0] + "\n" + caption_options[1])
+                    # print("Model's Answer:\n")
                 
-                answer = captioner(image_options[0], caption_options[0], caption_options[1])
-                if answer[0].lower() == 'a':
-                    correct = 1
-                else:
-                    correct = 0
-                correct_cnt += correct
+                    answer = captioner(image_options[0], caption_options[0], caption_options[1])
+                    if answer[0].lower() == 'a':
+                        correct = 1
+                    else:
+                        correct = 0
+                    correct_cnt += correct
+                    f.write(f'{i},{correct}\n')
 
-                iter_cnt += 1
-            #     if iter_cnt >= idx_limit:
-            #         iter_cnt = 0
-            #         break
-                
-            # count = idx_limit
+                    iter_cnt += 1
+                #     if iter_cnt >= idx_limit:
+                #         iter_cnt = 0
+                #         break
+                    
+                # count = idx_limit
             accuracy = correct_cnt / iter_cnt 
             metrics[dataset_name] = accuracy
 
