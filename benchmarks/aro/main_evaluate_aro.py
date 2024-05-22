@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, default_collate
 import pandas as pd
 import torch
 from tqdm import tqdm
-
+import re
 from torch.utils.data import DataLoader
 import open_clip
 from torchvision import transforms
@@ -401,7 +401,7 @@ class ARO_generative_evaluation:
             iter_cnt = 0
 
             model_name_short = self.model_name.split("/")[1].split('-')[0]
-            log_file_path = f'./outputs/log_run/{model_name_short}/{dataset_name}_log.csv'
+            log_file_path = f'./outputs/log_run/{model_name_short}/aro/{dataset_name}_log.csv'
             
             if os.path.exists(log_file_path) and resume_from_checkpoint:
                 with open(log_file_path, 'r') as f:
@@ -415,46 +415,26 @@ class ARO_generative_evaluation:
                 for i, example in tqdm(enumerate(dataset[start:])):
                     i += start
                     image_options = example['image_options']
-                    caption_options = example['caption_options']
-
-                    # Debugging: Check batch content sizes
-                    # print(f"Debug: Processing batch with {len(image_options)} images and {len(caption_options)} caption pairs.")
-
-                    # Zip the image_options with caption_options
-                    # for img_feature, captions in zip(image_options, caption_options):
-                        # img_feature is a BatchFeature object containing the 'pixel_values' key
-                        # Accessing the tensor(s) from the BatchFeature
-                        # # Assuming there is always at least one image per feature , accessing  the first
-                        # if img_feature['pixel_values']:  # Check if there are any pixel values
-                        #     img_tensor = img_feature['pixel_values'][0]
-
-                        #     if img_tensor.min() < 0 or img_tensor.max() > 1:
-                        #         # print("Image tensor values are outside the expected range [0, 1].")
-                        #         # image_tensor = self.image_preprocess(img_tensor)
-                        #         # img_tensor = (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min())
-                        #         img_tensor = (img_tensor - img_tensor.min(dim=1, keepdim=True)[0]) / (img_tensor.max(dim=1, keepdim=True)[0] - img_tensor.min(dim=1, keepdim=True)[0]) #Normalizing the tensor [0,1] range
-                            
-                            # print(f"Debug: Captions {captions}")
-                            # print("Shape of img_tensor before passing to model:", img_tensor.shape)
-                            
-                    # print('-'*100)
-                    # print("Available captions:\n" + caption_options[0] + "\n" + caption_options[1])
-                    # print("Model's Answer:\n")
-                
+                    caption_options = example['caption_options']                
                     answer = captioner(image_options[0], caption_options[0], caption_options[1])
-                    if answer[0].lower() == 'a':
-                        correct = 1
+                    if 'cot' in self.prompt_name:
+                        match = re.search('<A>', answer)
+                        if match :
+                            correct = 1
+                        elif re.search(' A ', answer) and not re.search('Caption A', answer):
+                            correct = 1
+                        else:
+                            correct = 0
                     else:
-                        correct = 0
+                        if answer[0].lower() == 'a':
+                            correct = 1
+                        else:
+                            correct = 0
                     correct_cnt += correct
                     f.write(f'{i},{correct}\n')
 
                     iter_cnt += 1
-                #     if iter_cnt >= idx_limit:
-                #         iter_cnt = 0
-                #         break
-                    
-                # count = idx_limit
+
             accuracy = correct_cnt / iter_cnt 
             metrics[dataset_name] = accuracy
 

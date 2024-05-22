@@ -438,7 +438,7 @@ class SugarCrepe_generative_evaluation:
                 iter_cnt = 0
 
                 model_name_short = self.model_name.split("/")[1].split('-')[0]
-                log_file_path = f'./outputs/log_run/{model_name_short}/{c}_log.csv'
+                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
                 
                 if os.path.exists(log_file_path) and resume_from_checkpoint:
                     with open(log_file_path, 'r') as f:
@@ -475,11 +475,20 @@ class SugarCrepe_generative_evaluation:
                         correct = 0
                         answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         # if answer[0].lower() == 'a':
-                        match = re.search('<A>', answer)
-                        if match :
-                            correct = 1
-                        elif re.search(' A ', answer) and not re.search('Caption A', answer):
-                            correct = 1
+                        if 'cot' in self.prompt_name:
+                            match = re.search('<A>', answer)
+                            if match :
+                                correct = 1
+                            elif re.search(' A ', answer) and not re.search('Caption A', answer):
+                                correct = 1
+                            else:
+                                correct = 0
+                        else:
+                            if answer[0].lower() == 'a':
+                                correct = 1
+                            else:
+                                correct = 0
+
                         correct_cnt += correct
                         iter_cnt += 1
                         if iter_cnt >= idx_limit:
