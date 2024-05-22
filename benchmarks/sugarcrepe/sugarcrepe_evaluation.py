@@ -2,7 +2,7 @@ from tqdm import tqdm
 import torch
 import open_clip
 from datasets import load_dataset
-
+import re
 
 class SugarCrepe_evaluation:
     """
@@ -127,8 +127,65 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-        else:
-            print("Prompt type not supported!")
+        # else:
+        #     print("Prompt type not supported!")
+
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Evaluate each caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does each caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in each caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as <A> or <B>, "
+            prompt += "based on which caption scores better across these criteria.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects as you compare each caption.\n"
+                    "Start by commenting on the general accuracy and relevance of both captions: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on each caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of each caption? \n"
+            prompt += "3. Depth of Description: Consider which caption provides a deeper and more comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as <A> or <B>.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+                    "which caption is the better description of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate each caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'A' or 'B'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the best caption and a summary of your reasoning across all cycles and state your final answer as <A> or <B>.\n"
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
         
         inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
@@ -263,12 +320,17 @@ class SugarCrepe_generative_evaluation:
         else:
             for c, data_dict in sugarcrepe.items():
                 correct_cnt = 0
-                idx_limit = 20
+                idx_limit = 10
+                # idx_limit = len(data_dict)
                 iter_cnt = 0
                 for data in tqdm(data_dict, desc=f'evaluating {c}'):
                     correct = 0
                     answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
-                    if answer[0].lower() == 'a':
+                    # if answer[0].lower() == 'a':
+                    match = re.search('<A>', answer)
+                    if match :
+                        correct = 1
+                    elif re.search(' A ', answer) and not re.search('Caption A', answer):
                         correct = 1
                     correct_cnt += correct
                     iter_cnt += 1

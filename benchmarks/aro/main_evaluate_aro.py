@@ -222,7 +222,7 @@ class ARO_generative_evaluation:
               "and analyze each caption against the image. Begin by describing the key elements "
               "visible in the image. Then, compare these elements with the details mentioned in "
               "each caption to determine which one matches better. After providing a detailed "
-              "explanation of your reasoning, clearly state your final answer as 'A' or 'B'.\n")
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
@@ -238,7 +238,7 @@ class ARO_generative_evaluation:
             prompt += "1. Relevance: How well does each caption relate to the key elements you have described? \n"
             prompt += "2. Accuracy: Are the details mentioned in each caption correct as per the image? \n"
             prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
-            prompt += "Conclude with your assessment for each caption and state your final answer as 'A' or 'B', "
+            prompt += "Conclude with your assessment for each caption and state your final answer as <A> or <B>, "
             prompt += "based on which caption scores better across these criteria.\n"
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
@@ -254,7 +254,7 @@ class ARO_generative_evaluation:
             prompt += "1. Initial Impressions: What are your first thoughts on each caption based on the visible elements? \n"
             prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of each caption? \n"
             prompt += "3. Depth of Description: Consider which caption provides a deeper and more comprehensive description of the image. \n"
-            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'A' or 'B'.\n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as <A> or <B>.\n"
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
@@ -267,7 +267,7 @@ class ARO_generative_evaluation:
             prompt += "Cycle 1: Provide your initial analysis and choose between 'A' or 'B'.\n"
             prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
             prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
-            prompt += "Conclude with your final, consistent decision on the best caption and a summary of your reasoning across all cycles.\n"
+            prompt += "Conclude with your final, consistent decision on the best caption and a summary of your reasoning across all cycles and state your final answer as <A> or <B>.\n"
             prompt += "A. " + caption_0.strip() + "\n"
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
@@ -364,22 +364,13 @@ class ARO_generative_evaluation:
         output = output.split("</s>")[0]
         return output
 
-    # def image_preprocess(self,image):
-    #     # Check if the image is already a tensor
-    #     if not isinstance(image, torch.Tensor):
-    #         # Convert PIL Image or ndarray to tensor
-    #         image = transforms.functional.to_tensor(image)
-
-    #     # Normalize the image tensor
-    #     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    #     return normalize(image)
-    
-
     def evaluate_aro(self):
         seed = 1
         seed_all(seed)
 
-        dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
+        # dataset_names =["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]
+        # dataset_names = ["VG_Relation", "VG_Attribution"]
+        dataset_names =["COCO_Order", "Flickr30k_Order"]
         download = True
         batch_size = 1
         num_workers = 0 #chnage this to 4 when finished debugging
@@ -433,6 +424,7 @@ class ARO_generative_evaluation:
                 # print('-'*100)
                 # print("Available captions:\n" + caption_options[0] + "\n" + caption_options[1])
                 # print("Model's Answer:\n")
+                
                 answer = captioner(image_options[0], caption_options[0], caption_options[1])
                 if answer[0].lower() == 'a':
                     correct = 1
