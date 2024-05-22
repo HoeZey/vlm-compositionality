@@ -2,7 +2,6 @@ import json
 from PIL import Image
 
 
-
 def get_examples():
     with open('./fewshot/captions.json', 'r') as f:
         captions_pairs = json.load(f)
@@ -16,5 +15,3 @@ def get_examples():
         examples.append(example)
 
     return examples
-
-print(get_examples())
