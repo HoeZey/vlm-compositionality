@@ -52,3 +52,4 @@ outputs/
 .cache/
 wandb/
 scripts/
+benchmarks/dci/data/
