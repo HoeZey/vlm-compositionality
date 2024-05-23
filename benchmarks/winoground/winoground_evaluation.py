@@ -456,7 +456,7 @@ class Winoground_generative_evaluation:
         #     max_new_tokens = 1
 
         elif self.prompt_name == "rag-few-shot":
-            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.rag_fewshot:
                 c0 = x['caption']
@@ -469,10 +469,10 @@ class Winoground_generative_evaluation:
             "visible in the image. Then, compare these elements with the details mentioned in "
             "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 10
+            max_new_tokens = 100
 
         elif self.prompt_name == "rag-few-shot-negatives":
-            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.rag_fewshot:
                 c0 = x['caption']
@@ -492,7 +492,7 @@ class Winoground_generative_evaluation:
             "visible in the image. Then, compare these elements with the details mentioned in "
             "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image> The description of the Image is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 10
+            max_new_tokens = 100
 
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
 
@@ -955,25 +955,39 @@ class Winoground_generative_evaluation:
                 ans_c0_i1 = captioner(caption_0, image_1)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
-                match = re.search(' YES ', ans_c0_i0) or re.search('<YES>', ans_c0_i0)
+                match = re.search(' YES ', ans_c0_i1) or re.search('<YES>', ans_c0_i0)
                 if match:
-                    result["c0_i0"] = 1.0
+                    result["c0_i1"] = 1.0
                 else:
-                    result["c0_i0"] = 0.0
+                    result["c0_i1"] = 0.0
     
 
 
                 ans_c1_i0 = captioner(caption_1, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
                 print ("Match between C1 and I0: ", ans_c1_i0)
-                if "yes" in ans_c1_i0[:10].lower():
+
+                match = re.search(' YES ', ans_c1_i0) or re.search('<YES>', ans_c1_i0)
+                if match:
                     result["c1_i0"] = 1.0
                 else:
                     result["c1_i0"] = 0.0
 
+                # if "yes" in ans_c1_i0[:10].lower():
+                #     result["c1_i0"] = 1.0
+                # else:
+                #     result["c1_i0"] = 0.0
+
                 ans_c1_i1 = captioner(caption_1, image_1)
                 image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
                 print ("Match between C1 and I1: ", ans_c1_i1)
+                match = re.search(' YES ', ans_c1_i1) or re.search('<YES>', ans_c1_i1)
+                if match:
+                    result["c1_i1"] = 1.0
+                else:
+                    result["c1_i1"] = 0.0
+
+
                 if "yes" in ans_c1_i1[:10].lower():
                     result["c1_i1"] = 1.0
                 else:

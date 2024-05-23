@@ -27,8 +27,8 @@ _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.
 
 # BENCHMARKS_LIST = ["aro", "sugarcrepe", "winoground", 'vlchecklist']
 
-# BENCHMARKS_LIST = ["winoground"]
-BENCHMARKS_LIST = ["sugarcrepe"]
+BENCHMARKS_LIST = ["winoground"]
+# BENCHMARKS_LIST = ["sugarcrepe"]
 # BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16
@@ -48,13 +48,13 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["gpt4-evensmallerprompt"]
         # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
         # PROMPT_LIST = ["alignment"]
-        PROMPT_LIST = ["gpt4-smallerprompt"]
+        # PROMPT_LIST = ["gpt4-smallerprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["gpt4-shorterprompt"]
         # PROMPT_LIST = ["cot"]
         # PROMPT_LIST = ["cot", "auto-cot", "cbe-cot", "ltm-cot", "sc-cot"]
         
-        PROMPT_LIST = ["cbe-cot"]
+        PROMPT_LIST = ["rag-few-shot"]
 
     if _A.evaluation_type == "logits":
         if BENCHMARKS_LIST == ["winoground"]:
