@@ -422,33 +422,31 @@ class SugarCrepe_generative_evaluation:
             captioner = self.blip2_caption_choice
         elif self.model_name == "THUDM/cogvlm-chat-hf":
             captioner = self.cogvlm_caption_choice
+        
+        model_name_short = self.model_name.split("/")[1].split('-')[0]
+        log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
 
+        if os.path.exists(log_file_path) and resume_from_checkpoint:
+            with open(log_file_path, 'r') as f:
+                start = int(f.readlines()[-1].split(',')[0]) + 1
+        else:
+            start = 0
 
-        if self.evaluation_type == "logits":
-            if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                captioner = self.llava_caption_logits
-            elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                captioner = self.blip2_caption_logits
-            elif self.model_name == "THUDM/cogvlm-chat-hf":
-                captioner = self.cogvlm_caption_logits
+        with open(log_file_path) as f:
+            if not resume_from_checkpoint:
+                f.write('id,correct')
+            if self.evaluation_type == "logits":
+                if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                    captioner = self.llava_caption_logits
+                elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                    captioner = self.blip2_caption_logits
+                elif self.model_name == "THUDM/cogvlm-chat-hf":
+                    captioner = self.cogvlm_caption_logits
 
-            for c, data_dict in sugarcrepe.items():                
-                correct_cnt = 0
-                idx_limit = 20
-                iter_cnt = 0
-
-                model_name_short = self.model_name.split("/")[1].split('-')[0]
-                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
-                
-                if os.path.exists(log_file_path) and resume_from_checkpoint:
-                    with open(log_file_path, 'r') as f:
-                        start = int(f.readlines()[-1].split(',')[0]) + 1
-                else:
-                    start = 0
-
-                with(log_file_path) as f:
-                    if not resume_from_checkpoint:
-                        f.write('id,correct')
+                for c, data_dict in sugarcrepe.items():                
+                    correct_cnt = 0
+                    idx_limit = 20
+                    iter_cnt = 0
 
                     for i, data in tqdm(enumerate(data_dict[start:]), desc=f'evaluating {c}'):
                         i += start

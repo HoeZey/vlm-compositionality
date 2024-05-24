@@ -91,8 +91,8 @@ def main(_A: argparse.Namespace):
                 tokenizer = None
         elif model_name == "THUDM/cogvlm-chat-hf":
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=TORCH_TYPE, low_cpu_mem_usage=True, trust_remote_code=True
-            ).to(DEVICE).eval()
+                model_name, device_map='auto', torch_dtype=TORCH_TYPE, low_cpu_mem_usage=True, trust_remote_code=True
+            ).eval()
             processor = None
             tokenizer = LlamaTokenizer.from_pretrained("lmsys/vicuna-7b-v1.5")
         else:
@@ -100,15 +100,15 @@ def main(_A: argparse.Namespace):
         
         for prompt_name in PROMPT_LIST:
             wandb.init(
-            # set the wandb project where this run will be logged
-            project="full_datasets",
-            entity="fomo-vlm-comp",
-            # track hyperparameters and run metadata
-            config={
-                "model": model_name,
-                "prompt": prompt_name
-                },
-            mode="disabled" if TESTING else "online",
+                # set the wandb project where this run will be logged
+                project="full_datasets",
+                entity="fomo-vlm-comp",
+                # track hyperparameters and run metadata
+                config={
+                    "model": model_name,
+                    "prompt": prompt_name
+                    },
+                mode="disabled" if TESTING else "online",
             )
 
             for benchmark in BENCHMARKS_LIST:                                   
