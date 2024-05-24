@@ -1,7 +1,8 @@
 import os
 import sys
 sys.path.append("..")
-
+import json
+from PIL import Image
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, default_collate
@@ -565,9 +566,9 @@ class ARO_generative_evaluation:
             with open(log_file_path, 'a+') as f:
                 if not use_existing_file:
                     f.write('id,correct\n')
-                for i, example in tqdm(enumerate(dataset[start:])):
-                    if i < start:
-                        continue
+                for i, example in tqdm(enumerate(dataset[start:], total=len(dataset))):
+                    # if i < start:
+                    #     continue
                     image_options = example['image_options']
                     caption_options = example['caption_options']                
                     if self.evaluation_type == 'logits':
