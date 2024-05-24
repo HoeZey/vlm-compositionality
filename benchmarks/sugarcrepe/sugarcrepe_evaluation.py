@@ -420,11 +420,11 @@ class SugarCrepe_generative_evaluation:
                     for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
                         if i < start:
                             continue
-                        if i > 50:
-                            break
+
                         print(data['image'])
                         answerA, answerB = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         correct = int(answerA > answerB)
+
                         f.write(f'{i},{correct}\n')
 
                 metrics[c] = pd.read_csv(log_file_path)['correct'].mean()
