@@ -71,7 +71,9 @@ def main(_A: argparse.Namespace):
     
     for model_name in _A.model_list: 
         if model_name == "llava-hf/llava-1.5-7b-hf":
-            model = LlavaForConditionalGeneration.from_pretrained(model_name).to(DEVICE).eval()
+            model = LlavaForConditionalGeneration.from_pretrained(
+                model_name, device_map='auto', torch_dtype=TORCH_TYPE
+            ).eval()
             processor = AutoProcessor.from_pretrained(model_name)
             tokenizer = None
             # print(f"Processor type: {type(processor)}")
@@ -79,13 +81,13 @@ def main(_A: argparse.Namespace):
         
         elif model_name == "Salesforce/blip2-opt-2.7b":         
             if _A.tryingout_ce:
-                model = Blip2Model.from_pretrained(model_name)
+                model = Blip2Model.from_pretrained(model_name, device_map='auto', torch_dtype=torch.float16)
                 tokenizer = AutoTokenizer.from_pretrained("Salesforce/blip2-opt-2.7b")
                 processor = None
 
             else:   
                 model = Blip2ForConditionalGeneration.from_pretrained(
-                    model_name, load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
+                    model_name, device_map='auto', torch_dtype=torch.float16
                 )
                 processor = Blip2Processor.from_pretrained(model_name)
                 tokenizer = None
