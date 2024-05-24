@@ -303,6 +303,8 @@ class ARO_generative_evaluation:
         print(output)
         return output
 
+    @torch.no_grad()
+    def llava_caption_logits(self, image, caption_0, caption_1):
 
 
     @torch.no_grad()

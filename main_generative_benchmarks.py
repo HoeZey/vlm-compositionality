@@ -54,11 +54,13 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["cot"]
         # PROMPT_LIST = ["cot", "auto-cot", "cbe-cot", "ltm-cot", "sc-cot"]
         
-        PROMPT_LIST = ["rag-few-shot"]
+        # PROMPT_LIST = ["rag-few-shot"]
+        PROMPT_LIST = ["cbe-cot"]
 
     if _A.evaluation_type == "logits":
         if BENCHMARKS_LIST == ["winoground"]:
-            PROMPT_LIST = ["gpt4-smallerprompt"]
+            PROMPT_LIST = ["rag-few-shot"]
+            # PROMPT_LIST = ["gpt4-smallerprompt"]
         else: 
             PROMPT_LIST = ["gpt4-shorterprompt"]
     
@@ -95,7 +97,7 @@ def main(_A: argparse.Namespace):
         for prompt_name in PROMPT_LIST:
             wandb.init(
             # set the wandb project where this run will be logged
-            project="full_datasets",
+            project="cot_exp",
             entity="fomo-vlm-comp",
             # track hyperparameters and run metadata
             config={

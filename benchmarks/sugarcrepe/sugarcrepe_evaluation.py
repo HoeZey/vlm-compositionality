@@ -122,6 +122,109 @@ class SugarCrepe_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
 
+        # self.fewshot_data = fewshot_data[:n_shot]
+
+        ## Retrieval augmented generation
+        
+        
+        im1 = Image.open(
+        requests.get(
+            "http://images.cocodataset.org/val2017/000000039769.jpg", stream=True
+            ).raw
+        )
+        im2 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028137.jpg",
+                stream=True
+            ).raw
+        )
+        im3 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028352.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im4 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000442.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im5 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000448.jpg", 
+                stream=True
+            ).raw
+        )
+
+        caption_1 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
+        caption_2 = "A bathroom with a sink, cabinet, mirror and a shower curtain."
+        caption_3 = "A table full of salty and sweet food inside a cozy room."
+        caption_4 = "A room full of compute screens and some people working on them."
+        caption_5 = "A group of women talking about environmental issues while sitting at a table."
+
+        
+
+        rag_fewshot = []
+        rag_fewshot.append({"image": im1, "caption": caption_1})
+        rag_fewshot.append({"image": im2, "caption": caption_2})
+        rag_fewshot.append({"image": im3, "caption": caption_3})
+        rag_fewshot.append({"image": im4, "caption": caption_4})
+        rag_fewshot.append({"image": im5, "caption": caption_5})
+
+        self.rag_fewshot = rag_fewshot
+
+        ## Retrieval augmented generation with negatives
+
+        im1 = Image.open(
+        requests.get(
+            "http://images.cocodataset.org/test-stuff2017/000000000870.jpg", stream=True
+            ).raw
+        )
+        im2 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000527.jpg",
+                stream=True
+            ).raw
+        )
+        im3 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001227.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im4 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001331.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im5 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000001574.jpg", 
+                stream=True
+            ).raw
+        )
+
+        caption_1 = "The giraffe is on top of the trees."
+        caption_2 = "The zebra is outside the cage."
+        caption_3 = "The kite is carrying the lady."
+        caption_4 = "The ball is in the air, and the boys are running from it."
+        caption_5 = "The computer is under the shelf."
+
+        rag_fewshot_negatives = []
+        rag_fewshot_negatives.append({"image": im1, "caption": caption_1})
+        rag_fewshot_negatives.append({"image": im2, "caption": caption_2})
+        rag_fewshot_negatives.append({"image": im3, "caption": caption_3})
+        rag_fewshot_negatives.append({"image": im4, "caption": caption_4})
+        rag_fewshot_negatives.append({"image": im5, "caption": caption_5})
+
+        self.rag_fewshot_negatives = rag_fewshot_negatives
+
     @torch.no_grad()
     def llava_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
@@ -189,8 +292,53 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
+
+        elif self.prompt_name == "rag-few-shot":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+
+            prompt += ("USER: \nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 100
+
+        elif self.prompt_name == "rag-few-shot-negatives":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                # fewshot_images.append(x['image_1'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+
+            for x in self.rag_fewshot_negatives:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                # fewshot_images.append(x['image_1'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption does not match the image, the answer is <NO>.\n"
+
+            prompt += ("USER: \nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image> The description of the Image is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 100
+
+
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives":
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
