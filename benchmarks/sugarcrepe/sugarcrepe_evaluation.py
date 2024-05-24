@@ -423,27 +423,28 @@ class SugarCrepe_generative_evaluation:
         elif self.model_name == "THUDM/cogvlm-chat-hf":
             captioner = self.cogvlm_caption_choice
         
-        model_name_short = self.model_name.split("/")[1].split('-')[0]
-        log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
+        if self.evaluation_type == "logits":
+            if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                captioner = self.llava_caption_logits
+            elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                captioner = self.blip2_caption_logits
+            elif self.model_name == "THUDM/cogvlm-chat-hf":
+                captioner = self.cogvlm_caption_logits
 
-        if os.path.exists(log_file_path) and resume_from_checkpoint:
-            with open(log_file_path, 'r') as f:
-                start = int(f.readlines()[-1].split(',')[0]) + 1
-        else:
-            start = 0
+            for c, data_dict in sugarcrepe.items():    
+                model_name_short = self.model_name.split("/")[1].split('-')[0]
+                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
 
-        with open(log_file_path) as f:
-            if not resume_from_checkpoint:
-                f.write('id,correct')
-            if self.evaluation_type == "logits":
-                if self.model_name == "llava-hf/llava-1.5-7b-hf":
-                    captioner = self.llava_caption_logits
-                elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    captioner = self.blip2_caption_logits
-                elif self.model_name == "THUDM/cogvlm-chat-hf":
-                    captioner = self.cogvlm_caption_logits
+                if os.path.exists(log_file_path) and resume_from_checkpoint:
+                    with open(log_file_path, 'r') as f:
+                        start = int(f.readlines()[-1].split(',')[0]) + 1
+                else:
+                    start = 0
 
-                for c, data_dict in sugarcrepe.items():                
+                with open(log_file_path) as f:
+                    if not resume_from_checkpoint:
+                        f.write('id,correct')
+            
                     correct_cnt = 0
                     idx_limit = 20
                     iter_cnt = 0
@@ -460,14 +461,29 @@ class SugarCrepe_generative_evaluation:
                             break
                     # count = len(data_dict)
                         f.write(f'{i},{correct}\n')
-                    count = idx_limit
-                    metrics[c] = correct_cnt / count      
-            else:
-                for c, data_dict in sugarcrepe.items():
-                    correct_cnt = 0
-                    idx_limit = 10
-                    # idx_limit = len(data_dict)
-                    iter_cnt = 0
+
+                count = idx_limit
+                metrics[c] = correct_cnt / count      
+        else:
+            for c, data_dict in sugarcrepe.items():
+                correct_cnt = 0
+                idx_limit = 10
+                # idx_limit = len(data_dict)
+                iter_cnt = 0
+                
+                model_name_short = self.model_name.split("/")[1].split('-')[0]
+                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
+
+                if os.path.exists(log_file_path) and resume_from_checkpoint:
+                    with open(log_file_path, 'r') as f:
+                        start = int(f.readlines()[-1].split(',')[0]) + 1
+                else:
+                    start = 0
+
+                with open(log_file_path) as f:
+                    if not resume_from_checkpoint:
+                        f.write('id,correct')
+
                     for i, data in tqdm(enumerate(data_dict), desc=f'evaluating {c}'):
                         i += start
                         correct = 0
@@ -492,9 +508,9 @@ class SugarCrepe_generative_evaluation:
                         if iter_cnt >= idx_limit:
                             break
                         f.write(f'{i},{correct}\n')
-                    # count = len(data_dict)
-                    count = idx_limit
-                    metrics[c] = correct_cnt / count
-                    
+                # count = len(data_dict)
+                count = idx_limit
+                metrics[c] = correct_cnt / count
+                
         print(metrics)
         return {"SugarCrepe_accuracies": metrics}
