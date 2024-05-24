@@ -301,11 +301,12 @@ class SugarCrepe_generative_evaluation:
                 fewshot_images.append(x['image'])
                 prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
 
-            prompt += ("USER: \nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
-            "and analyze the caption against the image. Begin by describing the key elements "
-            "visible in the image. Then, compare these elements with the details mentioned in "
-            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 100
 

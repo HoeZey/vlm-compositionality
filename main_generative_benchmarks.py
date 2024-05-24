@@ -55,11 +55,14 @@ def main(_A: argparse.Namespace):
         # PROMPT_LIST = ["cot", "auto-cot", "cbe-cot", "ltm-cot", "sc-cot"]
         
         # PROMPT_LIST = ["rag-few-shot"]
-        PROMPT_LIST = ["cbe-cot"]
+        # PROMPT_LIST = ["cbe-cot"]
+
+        PROMPT_LIST = ["synth"]
 
     if _A.evaluation_type == "logits":
         if BENCHMARKS_LIST == ["winoground"]:
-            PROMPT_LIST = ["rag-few-shot"]
+            PROMPT_LIST = ["synth"]
+            # PROMPT_LIST = ["rag-few-shot"]
             # PROMPT_LIST = ["gpt4-smallerprompt"]
         else: 
             PROMPT_LIST = ["gpt4-shorterprompt"]

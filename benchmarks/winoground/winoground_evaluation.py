@@ -256,7 +256,19 @@ class Winoground_generative_evaluation:
         self.rag_fewshot_negatives = rag_fewshot_negatives
 
         
+        with open("vlm-compositionality/fewshot/images/captions_dalle.json", 'r') as f:
+            captions_pairs = json.load(f)
 
+        synthetic_examples = []
+        for captions in captions_pairs.values():
+            example = {}
+            for i, (img_file, capts) in enumerate(captions.items()):
+                example['image'] = Image.open(f'./fewshot/images/{img_file}')
+                example['caption_A'] = capts[0]
+                example['caption_B'] = capts[1]
+            synthetic_examples.append(example)
+
+        self.synthetic_examples = synthetic_examples
 
         # rag_fewshot["example"]
         # rag_fewshot["image_1"] = im1
@@ -496,9 +508,27 @@ class Winoground_generative_evaluation:
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
 
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+                prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
 
-        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives":
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives" or self.prompt_name == "synth":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
@@ -567,6 +597,24 @@ class Winoground_generative_evaluation:
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
             "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+        
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+                prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
 
@@ -1016,7 +1064,7 @@ class Winoground_generative_evaluation:
         random.seed(2023)
         subset_idx = random.sample(range(len(winoground)), 300)
         # subset_idx = range(len(winoground))
-        subset_idx = subset_idx[:20]
+        subset_idx = subset_idx[:100]
         #taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":

@@ -129,6 +129,20 @@ class ARO_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
 
+        with open('./fewshot/captions_dalle.json', 'r') as f:
+            captions_pairs = json.load(f)
+
+        synthetic_examples = []
+        for captions in captions_pairs.values():
+            example = {}
+            for i, (img_file, capts) in enumerate(captions.items()):
+                example['image'] = Image.open(f'./fewshot/images/{img_file}')
+                example['caption_A'] = capts[0]
+                example['caption_B'] = capts[1]
+            synthetic_examples.append(example)
+
+        self.synthetic_examples = synthetic_examples
+
 
     def load_dataset(self, dataset_name, image_preprocess=None, text_perturb_fn=None, image_perturb_fn=None, download=False, *args, **kwargs):
         """
@@ -303,7 +317,53 @@ class ARO_generative_evaluation:
         print(output)
         return output
 
+    @torch.no_grad()
+    def llava_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
 
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0.strip() + "\n"
+                prompt += "B. " + c1.strip() + "\n"
+                prompt += f"<image>. Caption A. matches the image, the answer is <A.>.\n"
+
+            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
+            prompt += "A. " + c0.strip() + "\n"
+            prompt += "B. " + c1.strip() + "\n"
+            prompt += f"<image> ASSISTANT: "
+            max_new_tokens = 500
+        else:
+            print("Prompt type not supported!")
+
+        
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+        
+        # Contrast logits
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+
+        return a_logits, b_logits
+    
 
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe

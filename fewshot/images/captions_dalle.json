@@ -1,22 +1,17 @@
 {
     "1": {
-        "img_1_1.jpg": "A zebra atop a car parked beneath a towering tree.",
-        "img_1_2.jpg": "A zebra stands next to a tree, while a car is parked on top of the tree's branches."
+        "zebra.jpg": ["A zebra atop a car parked beneath a towering tree.", "A zebra stands next to a tree, while a car is parked on top of the tree's branches."]
     },
     "2": {
-        "img_2_1.jpg": "A person enjoying pastries at a table with a slot machine nearby, ready for a win.",
-        "img_2_2.jpg": "A person playing a slot machine, with pastries stacked on the table nearby, savoring both luck and treats."
+        "pastries.jpg": ["A person enjoying pastries at a table with a slot machine nearby, ready for a win.", "A person playing a slot machine, with pastries stacked on the table nearby, savoring both luck and treats."]
     },
     "3": {
-        "img_3_1.jpg": "A cow grazes on grass while a key lies nearby, with a computer set up incongruously in the lush field.",
-        "img_3_2.jpg": "A computer set up on the grass, while a cow stands nearby, a key hanging from its neck in the open field."
+        "windows.jpg": ["A cow grazes on grass while a key lies nearby, with a computer set up incongruously in the lush field.", "A computer set up on the grass, while a cow stands nearby, a key hanging from its neck in the open field."]
     },
     "4": {
-        "img_4_1.jpg": "A woman with a backpack and a tie, holding a basketball, ready for both business and play.",
-        "img_4_2.jpg": "A woman in a tie playing basketball, her backpack resting nearby, blending work and leisure."
+        "woman.jpg": ["A woman with a backpack and a tie, holding a basketball, ready for both business and play.", "A woman in a tie playing basketball, her backpack resting nearby, blending work and leisure."]
     },
     "5": {
-        "img_5_1.jpg": "A dog curled up on a chair with a book and a stuffed toy, enjoying a peaceful moment.",
-        "img_5_2.jpg": "A dog playing with a stuffed toy on the floor, while a book lies open on the chair nearby, creating a lively scene."
+        "dog.jpg": ["A dog curled up on a chair with a book and a stuffed toy, enjoying a peaceful moment.", "A dog playing with a stuffed toy on the floor, while a book lies open on the chair nearby, creating a lively scene."]
     }
 }
