@@ -441,7 +441,7 @@ class SugarCrepe_generative_evaluation:
                 else:
                     start = 0
 
-                with open(log_file_path) as f:
+                with open(log_file_path, 'a') as f:
                     if not resume_from_checkpoint:
                         f.write('id,correct')
             
@@ -480,7 +480,7 @@ class SugarCrepe_generative_evaluation:
                 else:
                     start = 0
 
-                with open(log_file_path) as f:
+                with open(log_file_path, 'a') as f:
                     if not resume_from_checkpoint:
                         f.write('id,correct')
 
