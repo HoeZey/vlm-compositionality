@@ -45,33 +45,10 @@ def main(_A: argparse.Namespace):
     PROMPT_LIST = _A.prompt_type_list
     if _A.aro_subsets is not None:
         print(f"ARO subsets: {_A.aro_subsets}")
-    # if _A.evaluation_type == "accuracy_score":
-    #     # PROMPT_LIST = ["gpt4", "gpt4-moretokens", "gpt4-shorterprompt","choices-first", "choices-first-numbers"]
-    #     # PROMPT_LIST = ["gpt4-moretokens"]
-    #     # PROMPT_LIST = ["alignment"]
-    #     PROMPT_LIST = ['gpt4-shorterprompt']
-    # if _A.evaluation_type == "text_image_group_score":
-    #     # PROMPT_LIST = ["gpt4-evensmallerprompt"]
-    #     # PROMPT_LIST = ["gpt4-evensmallerprompt2"]
-    #     # PROMPT_LIST = ["alignment"]
-    #     PROMPT_LIST = ["gpt4-smallerprompt"]
-    #     # PROMPT_LIST = ["gpt4-shorterprompt"]
-    #     # PROMPT_LIST = ["gpt4-shorterprompt"]
-    #     # PROMPT_LIST = ["cot"]
-    #     PROMPT_LIST = ["cot", "auto-cot", "cbe-cot", "ltm-cot", "sc-cot"]
-        
-    #     PROMPT_LIST = ["cbe-cot"]
 
     print(f'Models: {_A.model_list}')
     print(f'Benchmarks: {_A.benchmark_list}')
-    print(f'Prompts: {_A.prompt_type_list}')
-
-    if _A.evaluation_type == "logits":
-        if BENCHMARKS_LIST == ["winoground"]:
-            PROMPT_LIST = ["gpt4-smallerprompt"]
-        else: 
-            PROMPT_LIST = ["gpt4-shorterprompt"]
-    
+    print(f'Prompts: {_A.prompt_type_list}')    
     
     for model_name in _A.model_list: 
         if model_name == "llava-hf/llava-1.5-7b-hf":

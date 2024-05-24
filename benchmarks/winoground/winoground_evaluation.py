@@ -255,6 +255,20 @@ class Winoground_generative_evaluation:
 
         self.rag_fewshot_negatives = rag_fewshot_negatives
 
+        
+        with open("vlm-compositionality/fewshot/images/captions_dalle.json", 'r') as f:
+            captions_pairs = json.load(f)
+
+        synthetic_examples = []
+        for captions in captions_pairs.values():
+            example = {}
+            for i, (img_file, capts) in enumerate(captions.items()):
+                example['image'] = Image.open(f'./fewshot/images/{img_file}')
+                example['caption_A'] = capts[0]
+                example['caption_B'] = capts[1]
+            synthetic_examples.append(example)
+
+        self.synthetic_examples = synthetic_examples
 
         # rag_fewshot["example"]
         # rag_fewshot["image_1"] = im1
@@ -383,7 +397,7 @@ class Winoground_generative_evaluation:
         
         elif self.prompt_name == "cot":  # Chain of Thought Prompting (Option 1)
             prompt = ("USER: <image>\nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image." 
+            "does the caption accurately describe of the given image? Analyze the last caption against the last image." 
             "Begin by describing the key elements visible in the image. Compare these elements with the details mentioned in the caption." 
             "Answer by stating your choice between 'yes' or 'no', and follow with a detailed explanation of why that caption fits best.\n")
             prompt += "Caption:" + caption.strip() + "\n"
@@ -393,10 +407,10 @@ class Winoground_generative_evaluation:
 
         elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
             prompt = ("USER: <image>\nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            "does the caption accurately describe of the given image? Analyze the last caption against the last image. Think step-by-step"
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as 'Yes' or 'No'.\n")
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 500
@@ -411,7 +425,7 @@ class Winoground_generative_evaluation:
             prompt += "1. Relevance: How well does the caption relate to the key elements you have described? \n"
             prompt += "2. Accuracy: Are the details mentioned in the caption correct as per the image? \n"
             prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
-            prompt += "Conclude with your assessment for each caption and state your final answer as 'Yes' or 'No', "
+            prompt += "Conclude with your assessment for each caption and state your final answer as <Yes> or <No>, "
             prompt += "based on the caption score across these criteria.\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT: \n"
@@ -426,7 +440,7 @@ class Winoground_generative_evaluation:
             prompt += "1. Initial Impressions: What are your first thoughts on the caption based on the visible elements? \n"
             prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of the caption? \n"
             prompt += "3. Depth of Description: Consider if the caption provides a comprehensive description of the image. \n"
-            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as 'Yes' or 'No'.\n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as <Yes> or <No>.\n"
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
@@ -456,47 +470,65 @@ class Winoground_generative_evaluation:
         #     max_new_tokens = 1
 
         elif self.prompt_name == "rag-few-shot":
-            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.rag_fewshot:
                 c0 = x['caption']
                 fewshot_images.append(x['image'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
 
-            prompt += ("USER: \nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 10
+            max_new_tokens = 500
 
         elif self.prompt_name == "rag-few-shot-negatives":
-            prompt = "USER: Does the image match the caption?. Answer in the format of: \"Yes or No.\"))\n"
+            prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.rag_fewshot:
                 c0 = x['caption']
                 fewshot_images.append(x['image'])
                 # fewshot_images.append(x['image_1'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
 
             for x in self.rag_fewshot_negatives:
                 c0 = x['caption']
                 fewshot_images.append(x['image'])
                 # fewshot_images.append(x['image_1'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption does not match the image, the answer is <NO>.\n"
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption does not match the image, the answer is <No>.\n"
 
-            prompt += ("USER: \nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe of the given image? Analyze only the last caption against the last image. Think step-by-step"
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
-            prompt += f"<image> The description of the Image is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 10
+            "the caption. After providing an explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+                prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
 
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
 
-        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives":
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives" or self.prompt_name == "synth":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
@@ -515,7 +547,7 @@ class Winoground_generative_evaluation:
 
         
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        # print(output)
+        print(output)
         output = output.split('ASSISTANT:')[1]
         return output    
 
@@ -552,9 +584,41 @@ class Winoground_generative_evaluation:
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 50
 
+        elif self.prompt_name == "rag-few-shot":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
 
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe of the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+        
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+                prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
 
-        if self.prompt_name == "few-shot":
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
@@ -607,6 +671,57 @@ class Winoground_generative_evaluation:
             prompt += caption.strip() + "?"
             prompt += "Answer:"
             max_new_tokens = 35
+
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer:"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Evaluate the caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does the caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in the caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as <Yes> or <No>, "
+            prompt += "based on the caption score across these criteria.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects.\n"
+                    "Start by commenting on the general accuracy and relevance of the caption: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on the caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of the caption? \n"
+            prompt += "3. Depth of Description: Consider if the caption provides a comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as <Yes> or <No>.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate the caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'Yes' or 'No'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the caption and a summary of your reasoning across all cycles.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "Answer: \n"
+            max_new_tokens = 500
 
         ##icl arises form data
         ##why BLIP2 fails? dataset
@@ -670,6 +785,7 @@ class Winoground_generative_evaluation:
         output = self.processor.decode(generate_ids[0], skip_special_tokens=True)
         # print("output.logits", output.logits)
         # output = output.split('Answer:')[1]
+        print("output", output)
         return output
 
     @torch.no_grad()
@@ -746,7 +862,77 @@ class Winoground_generative_evaluation:
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 50
 
-        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "cbe-cot":  # Chain of Thought Prompting (Option 3: Criterion-Based Evaluation)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Evaluate the caption "
+                    "based on the following criteria: Relevance to the image, accuracy of the details, "
+                    "and completeness of the description.\n"
+                    "Start by describing the key elements visible in the image. Then proceed as follows:\n")
+            prompt += "1. Relevance: How well does the caption relate to the key elements you have described? \n"
+            prompt += "2. Accuracy: Are the details mentioned in the caption correct as per the image? \n"
+            prompt += "3. Completeness: Does the caption cover all the important aspects of the image? \n"
+            prompt += "Conclude with your assessment for each caption and state your final answer as <Yes> or <No>, "
+            prompt += "based on the caption score across these criteria.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "ltm-cot":  # Chain of Thought Prompting (Option 4: Least-to-Most Strategy)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Begin your analysis by identifying "
+                    "the most obvious elements and statements in the captions and image. Gradually move to more detailed "
+                    "and subtle aspects.\n"
+                    "Start by commenting on the general accuracy and relevance of the caption: \n")
+            prompt += "1. Initial Impressions: What are your first thoughts on the caption based on the visible elements? \n"
+            prompt += "2. Detailed Analysis: Examine closer details and subtleties in the image. How do these influence the accuracy of the caption? \n"
+            prompt += "3. Depth of Description: Consider if the caption provides a comprehensive description of the image. \n"
+            prompt += "Conclude with your final analysis, synthesizing all points, and state your final answer as <Yes> or <No>.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "sc-cot":  # Chain of Thought Prompting (Option 5: Self-Consistency)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+                    "does the caption accurately describe of the given image? Use a self-consistency approach by reasoning through the problem three times, "
+                    "each time trying to verify your previous conclusions. Begin by identifying the key elements visible in the image, then evaluate the caption against these elements.\n")
+            prompt += "Cycle 1: Provide your initial analysis and choose between 'Yes' or 'No'.\n"
+            prompt += "Cycle 2: Re-examine the key elements and your previous decision. Provide any new insights or changes in your reasoning.\n"
+            prompt += "Cycle 3: Final review and confirmation of your choice. Ensure consistency or revise if necessary.\n"
+            prompt += "Conclude with your final, consistent decision on the caption and a summary of your reasoning across all cycles.\n"
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT: \n"
+            max_new_tokens = 500
+
+        elif self.prompt_name == "rag-few-shot":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe of the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+
+        if self.prompt_name in ["rag-few-shot"]:
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=fewshot_images + [image])
+        else:
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
         inputs = {
             'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
             'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
@@ -773,7 +959,7 @@ class Winoground_generative_evaluation:
             output = self.model.generate(**inputs, **gen_kwargs)
             output = output[:, inputs['input_ids'].shape[1]:]
             output = self.tokenizer.decode(output[0])
-
+        print("output", output)
         output = output.split("</s>")[0]
         return output
 
@@ -810,7 +996,41 @@ class Winoground_generative_evaluation:
             prompt += f"Image: <image>. Caption: {caption.strip()}. ASSISTANT:"
             max_new_tokens = 50
 
-        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
+            prompt = ("USER: <image>\nGiven this image and a caption," 
+            "does the caption accurately describe of the given image? Analyze the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += "Caption: " + caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+
+        
+        
+        elif self.prompt_name == "rag-few-shot":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
+                c0 = x['caption']
+                fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+
+            prompt += ("USER: \nGiven an image and a caption," 
+            "does the caption accurately describe of the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+
+        
+        if self.prompt_name == "rag-few-shot":
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=fewshot_images + [image])
+        else:
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+
+        # input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
         inputs = {
             'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
             'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
@@ -844,7 +1064,7 @@ class Winoground_generative_evaluation:
         random.seed(2023)
         subset_idx = random.sample(range(len(winoground)), 300)
         # subset_idx = range(len(winoground))
-        subset_idx = subset_idx[:20]
+        subset_idx = subset_idx[:100]
         #taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
@@ -946,7 +1166,7 @@ class Winoground_generative_evaluation:
                 image_caption_match_results[str(idx)+"_c0_i0"] = ans_c0_i0
                 print ("Match between C0 and I0: ", ans_c0_i0.lower())
                                 
-                match = re.search(' YES ', ans_c0_i0) or re.search('<YES>', ans_c0_i0)
+                match = re.search(' yes ', ans_c0_i0.lower()) or re.search('<yes>', ans_c0_i0.lower())
                 if match:
                     result["c0_i0"] = 1.0
                 else:
@@ -955,29 +1175,42 @@ class Winoground_generative_evaluation:
                 ans_c0_i1 = captioner(caption_0, image_1)
                 image_caption_match_results[str(idx)+"_c0_i1"] = ans_c0_i1
                 print ("Match between C0 and I1: ", ans_c0_i1)
-                match = re.search(' YES ', ans_c0_i0) or re.search('<YES>', ans_c0_i0)
+                match = re.search(' YES ', ans_c0_i1.lower()) or re.search('<YES>', ans_c0_i0.lower())
                 if match:
-                    result["c0_i0"] = 1.0
+                    result["c0_i1"] = 1.0
                 else:
-                    result["c0_i0"] = 0.0
+                    result["c0_i1"] = 0.0
     
 
 
                 ans_c1_i0 = captioner(caption_1, image_0)
                 image_caption_match_results[str(idx)+"_c1_i0"] = ans_c1_i0
                 print ("Match between C1 and I0: ", ans_c1_i0)
-                if "yes" in ans_c1_i0[:10].lower():
+
+                match = re.search(' YES ', ans_c1_i0.lower()) or re.search('<YES>', ans_c1_i0.lower())
+                if match:
                     result["c1_i0"] = 1.0
                 else:
                     result["c1_i0"] = 0.0
 
+                # if "yes" in ans_c1_i0[:10].lower():
+                #     result["c1_i0"] = 1.0
+                # else:
+                #     result["c1_i0"] = 0.0
+
                 ans_c1_i1 = captioner(caption_1, image_1)
                 image_caption_match_results[str(idx)+"_c1_i1"] = ans_c1_i1
                 print ("Match between C1 and I1: ", ans_c1_i1)
-                if "yes" in ans_c1_i1[:10].lower():
+                match = re.search(' YES ', ans_c1_i1.lower()) or re.search('<YES>', ans_c1_i1.lower())
+                if match:
                     result["c1_i1"] = 1.0
                 else:
                     result["c1_i1"] = 0.0
+
+                # if "yes" in ans_c1_i1[:10].lower():
+                #     result["c1_i1"] = 1.0
+                # else:
+                #     result["c1_i1"] = 0.0
 
                 print ("result: ", result)
 

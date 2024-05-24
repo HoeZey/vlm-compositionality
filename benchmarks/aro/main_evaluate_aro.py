@@ -129,6 +129,20 @@ class ARO_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
 
+        with open('./fewshot/captions_dalle.json', 'r') as f:
+            captions_pairs = json.load(f)
+
+        synthetic_examples = []
+        for captions in captions_pairs.values():
+            example = {}
+            for i, (img_file, capts) in enumerate(captions.items()):
+                example['image'] = Image.open(f'./fewshot/images/{img_file}')
+                example['caption_A'] = capts[0]
+                example['caption_B'] = capts[1]
+            synthetic_examples.append(example)
+
+        self.synthetic_examples = synthetic_examples
+
 
     def load_dataset(self, dataset_name, image_preprocess=None, text_perturb_fn=None, image_perturb_fn=None, download=False, *args, **kwargs):
         """
@@ -303,7 +317,52 @@ class ARO_generative_evaluation:
         print(output)
         return output
 
+    @torch.no_grad()
+    def llava_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
 
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0.strip() + "\n"
+                prompt += "B. " + c1.strip() + "\n"
+                prompt += f"<image>. Caption A. matches the image, the answer is <A.>.\n"
+
+            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
+            prompt += "A. " + c0.strip() + "\n"
+            prompt += "B. " + c1.strip() + "\n"
+            prompt += f"<image> ASSISTANT: "
+            max_new_tokens = 500
+        else:
+            print("Prompt type not supported!")
+
+        
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+        
+        # Contrast logits
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+
+        return a_logits, b_logits 
 
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe
@@ -331,6 +390,49 @@ class ARO_generative_evaluation:
         print(output)
         return output
 
+    @torch.no_grad()
+    def blip2_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0.strip() + "\n"
+                prompt += "B. " + c1.strip() + "\n"
+                prompt += f"Caption A. matches the image, the answer is <A.>.\n"
+
+            prompt += ("USER: Given this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
+            prompt += "A. " + c0.strip() + "\n"
+            prompt += "B. " + c1.strip() + "\n"
+            prompt += f"ASSISTANT: "
+            max_new_tokens = 500
+        else:
+            print("Prompt type not supported!")
+
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+
+        # print("logits.shape", logits.shape)
+        a_logits = torch.mean(logits[:, 1037]) ## 1037 is the token id for 'A' based on bert tokenizer
+        b_logits = torch.mean(logits[:, 1038]) ## 1038 is the token id for 'B' based on bert tokenizer
+
+        return a_logits, b_logits        
 
     @torch.no_grad()
     def cogvlm_caption_choice(self, image, caption_0, caption_1):
@@ -365,6 +467,55 @@ class ARO_generative_evaluation:
         output = output.split("</s>")[0]
         return output
     
+    @torch.no_grad()
+    def cogvlm_caption_logits(self, image, caption_0, caption_1):
+        if self.prompt_name == "gpt4-shorterprompt":
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
+            prompt += "A. " + caption_0 + "\n"
+            prompt += "B. " + caption_1 + "\n"  
+            prompt += "ASSISTANT:"
+            max_new_tokens = 35
+
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0.strip() + "\n"
+                prompt += "B. " + c1.strip() + "\n"
+                prompt += f"<image>. Caption A. matches the image, the answer is <A.>.\n"
+
+            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+              "which caption is the better description of the given image? Think step-by-step "
+              "and analyze each caption against the image. Begin by describing the key elements "
+              "visible in the image. Then, compare these elements with the details mentioned in "
+              "each caption to determine which one matches better. After providing a detailed "
+              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
+            prompt += "A. " + c0.strip() + "\n"
+            prompt += "B. " + c1.strip() + "\n"
+            prompt += f"<image> ASSISTANT: "
+            max_new_tokens = 500
+        else:
+            print("Prompt type not supported!")
+        
+        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        inputs = {
+            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+        }
+        if 'cross_images' in input_by_model and input_by_model['cross_images']:
+            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+        outputs = self.model(**inputs)
+        logits = outputs.logits.squeeze()
+        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+
+        return a_logits, b_logits        
 
     def evaluate_aro(self, subsets, resume_from_checkpoint=True):
         print(subsets)
@@ -377,14 +528,20 @@ class ARO_generative_evaluation:
         num_workers = 0 #chnage this to 4 when finished debugging
         
         metrics = {}
-
-        if self.model_name == "llava-hf/llava-1.5-7b-hf":
-            captioner = self.llava_caption_choice
-
-        elif self.model_name == "Salesforce/blip2-opt-2.7b":
-            captioner = self.blip2_caption_choice
-        elif self.model_name == "THUDM/cogvlm-chat-hf":
-            captioner = self.cogvlm_caption_choice
+        if self.evaluation_type == 'logits':
+            if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                captioner = self.llava_caption_logits 
+            elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                captioner = self.blip2_caption_logits 
+            elif self.model_name == "THUDM/cogvlm-chat-hf":
+                captioner = self.cogvlm_caption_logits 
+        else:
+            if self.model_name == "llava-hf/llava-1.5-7b-hf":
+                captioner = self.llava_caption_choice 
+            elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                captioner = self.blip2_caption_choice
+            elif self.model_name == "THUDM/cogvlm-chat-hf":
+                captioner = self.cogvlm_caption_choice
 
         for dataset_name in dataset_names:
             dataset = self.load_dataset(dataset_name, download=download)
@@ -395,28 +552,29 @@ class ARO_generative_evaluation:
             #batch
             # joint_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn)
 
-            correct_cnt = 0
-            idx_limit = 20
-            iter_cnt = 0
-
             model_name_short = self.model_name.split("/")[1].split('-')[0]
-            log_file_path = f'./outputs/log_run/{model_name_short}/aro/{dataset_name}_log.csv'
-            
-            if os.path.exists(log_file_path) and resume_from_checkpoint:
+            log_file_path = f'./outputs/log_run/{model_name_short}/aro/{self.evaluation_type}_{dataset_name}_log.csv'
+                        
+            use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+            if use_existing_file:
                 with open(log_file_path, 'r') as f:
                     start = int(f.readlines()[-1].split(',')[0]) + 1
             else:
                 start = 0
-
-            with(log_file_path, 'w') as f:
-                if not resume_from_checkpoint:
-                    f.write('id,correct')
+            print(dataset_name, 'i_start', start)
+            with open(log_file_path, 'a+') as f:
+                if not use_existing_file:
+                    f.write('id,correct\n')
                 for i, example in tqdm(enumerate(dataset[start:])):
-                    i += start
+                    if i < start:
+                        continue
                     image_options = example['image_options']
                     caption_options = example['caption_options']                
-                    answer = captioner(image_options[0], caption_options[0], caption_options[1])
-                    if 'cot' in self.prompt_name:
+                    if self.evaluation_type == 'logits':
+                        answerA, answerB = captioner(image_options[0], caption_options[0], caption_options[1])
+                        correct = int(answerA > answerB)
+                    elif 'cot' in self.prompt_name:
+                        answer = captioner(image_options[0], caption_options[0], caption_options[1])
                         match = re.search('<A>', answer)
                         if match :
                             correct = 1
@@ -425,17 +583,14 @@ class ARO_generative_evaluation:
                         else:
                             correct = 0
                     else:
+                        answer = captioner(image_options[0], caption_options[0], caption_options[1])
                         if answer[0].lower() == 'a':
                             correct = 1
                         else:
                             correct = 0
-                    correct_cnt += correct
                     f.write(f'{i},{correct}\n')
 
-                    iter_cnt += 1
-
-            accuracy = correct_cnt / iter_cnt 
-            metrics[dataset_name] = accuracy
+            metrics[dataset_name] = pd.read_csv(log_file_path)['correct'].mean()
 
         print(metrics)
         return {"ARO_accuracies": metrics}
