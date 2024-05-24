@@ -33,10 +33,14 @@ _AA("--tryingout_ce", default=False, help="Tryingout for contrastive evaluation.
 # BENCHMARKS_LIST = ["sugarcrepe"]
 # BENCHMARKS_LIST = ["winoground"]
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-TORCH_TYPE = torch.bfloat16
 
 
 def main(_A: argparse.Namespace):
+    if 'blip' in _A.model_list[0]:
+        TORCH_TYPE = torch.float16
+    else:
+        TORCH_TYPE = torch.bfloat16
+
     BENCHMARKS_LIST = _A.benchmark_list
     PROMPT_LIST = _A.prompt_type_list
     if _A.aro_subsets is not None:

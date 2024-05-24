@@ -3,7 +3,7 @@ from tqdm import tqdm
 import torch
 import open_clip
 from datasets import load_dataset
-
+import pandas as pd
 from transformers import AutoTokenizer, LlamaForCausalLM, BertTokenizer
 import re
 
@@ -275,10 +275,10 @@ class SugarCrepe_generative_evaluation:
         # print("logits.shape", logits.shape)
         a_logits = torch.mean(logits[:, 1037]) ## 1037 is the token id for 'A' based on bert tokenizer
         b_logits = torch.mean(logits[:, 1038]) ## 1038 is the token id for 'B' based on bert tokenizer
-        print("a_logits", a_logits)
-        print("b_logits", b_logits)
-        print("a_logits.shape", a_logits.shape)
-        print("b_logits.shape", b_logits.shape)
+        # print("a_logits", a_logits)
+        # print("b_logits", b_logits)
+        # print("a_logits.shape", a_logits.shape)
+        # print("b_logits.shape", b_logits.shape)
 
         return a_logits, b_logits        
   
@@ -434,58 +434,50 @@ class SugarCrepe_generative_evaluation:
             for c, data_dict in sugarcrepe.items():    
                 model_name_short = self.model_name.split("/")[1].split('-')[0]
                 log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
-
-                if os.path.exists(log_file_path) and resume_from_checkpoint:
+                
+                use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+                if use_existing_file:
                     with open(log_file_path, 'r') as f:
                         start = int(f.readlines()[-1].split(',')[0]) + 1
                 else:
                     start = 0
-
+                print(c, 'i_start', start)
                 with open(log_file_path, 'a+') as f:
-                    if not resume_from_checkpoint:
-                        f.write('id,correct')
+                    if not use_existing_file:
+                        f.write('id,correct\n')
             
-                    correct_cnt = 0
-                    idx_limit = 20
-                    iter_cnt = 0
-
-                    for i, data in tqdm(enumerate(data_dict[start:]), desc=f'evaluating {c}'):
-                        i += start
+                    for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
+                        if i < start:
+                            continue
+                        if i > 50:
+                            break
                         correct = 0
                         answerA, answerB = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         if answerA > answerB:
                             correct = 1
-                        correct_cnt += correct
-                        iter_cnt += 1
-                        if iter_cnt >= idx_limit:
-                            break
-                    # count = len(data_dict)
                         f.write(f'{i},{correct}\n')
 
-                count = idx_limit
-                metrics[c] = correct_cnt / count      
+                metrics[c] = pd.read_csv(log_file_path)['correct'].mean()
+                print(metrics[c])
         else:
-            for c, data_dict in sugarcrepe.items():
-                correct_cnt = 0
-                idx_limit = 10
-                # idx_limit = len(data_dict)
-                iter_cnt = 0
-                
+            for c, data_dict in sugarcrepe.items():                
                 model_name_short = self.model_name.split("/")[1].split('-')[0]
                 log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
 
-                if os.path.exists(log_file_path) and resume_from_checkpoint:
+                use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+                if use_existing_file:
                     with open(log_file_path, 'r') as f:
                         start = int(f.readlines()[-1].split(',')[0]) + 1
                 else:
                     start = 0
-
+                print(c, 'i_start', start)
                 with open(log_file_path, 'a+') as f:
-                    if not resume_from_checkpoint:
+                    if not use_existing_file:
                         f.write('id,correct')
 
-                    for i, data in tqdm(enumerate(data_dict), desc=f'evaluating {c}'):
-                        i += start
+                    for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
+                        if i < start:
+                          continue
                         correct = 0
                         answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         # if answer[0].lower() == 'a':
@@ -502,15 +494,10 @@ class SugarCrepe_generative_evaluation:
                                 correct = 1
                             else:
                                 correct = 0
-
-                        correct_cnt += correct
-                        iter_cnt += 1
-                        if iter_cnt >= idx_limit:
-                            break
                         f.write(f'{i},{correct}\n')
                 # count = len(data_dict)
-                count = idx_limit
-                metrics[c] = correct_cnt / count
-                
+                metrics[c] = pd.read_csv(log_file_path)['correct'].mean()
+                print(metrics[c])
+
         print(metrics)
         return {"SugarCrepe_accuracies": metrics}
