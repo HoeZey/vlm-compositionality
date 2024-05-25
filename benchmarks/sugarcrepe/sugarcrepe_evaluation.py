@@ -223,7 +223,6 @@ class SugarCrepe_generative_evaluation:
 
         return a_logits, b_logits
     
-    
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
@@ -282,7 +281,6 @@ class SugarCrepe_generative_evaluation:
 
         return a_logits, b_logits        
   
-
     @torch.no_grad()
     def cogvlm_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
@@ -334,8 +332,8 @@ class SugarCrepe_generative_evaluation:
             'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
             'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
         }
-        # if 'cross_images' in input_by_model and input_by_model['cross_images']:
-        #     inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+        if 'cross_images' in input_by_model and input_by_model['cross_images']:
+            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
@@ -343,7 +341,6 @@ class SugarCrepe_generative_evaluation:
         b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits        
-
 
     @torch.no_grad()
     def cogvlm_caption_logits(self, image, caption_0, caption_1):
@@ -404,7 +401,7 @@ class SugarCrepe_generative_evaluation:
 
             for c, data_dict in sugarcrepe.items():    
                 model_name_short = self.model_name.split("/")[1].split('-')[0]
-                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{self.evaluation_type}_{c}_log.csv'
+                log_file_path = f'./log_run/{model_name_short}/sugarcrepe/{self.evaluation_type}_{c}_log.csv'
                 
                 use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
                 if use_existing_file:
@@ -421,7 +418,6 @@ class SugarCrepe_generative_evaluation:
                         if i < start:
                             continue
 
-                        print(data['image'])
                         answerA, answerB = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         correct = int(answerA > answerB)
 
@@ -449,7 +445,7 @@ class SugarCrepe_generative_evaluation:
                         if i < start:
                           continue
                         correct = 0
-                        print(data['image'])
+
                         answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         # if answer[0].lower() == 'a':
                         if 'cot' in self.prompt_name:
