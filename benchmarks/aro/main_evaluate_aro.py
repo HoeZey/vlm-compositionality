@@ -501,6 +501,9 @@ class ARO_generative_evaluation:
         else:
             print("Prompt type not supported!")
         
+        if image.mode is not 'RGB':
+            print(image.mode)
+            image = image.convert('RGB')
         input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
         inputs = {
             'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
