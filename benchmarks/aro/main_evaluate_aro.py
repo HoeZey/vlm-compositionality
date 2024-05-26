@@ -562,7 +562,8 @@ class ARO_generative_evaluation:
             use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
             if use_existing_file:
                 with open(log_file_path, 'r') as f:
-                    start = int(f.readlines()[-1].split(',')[0]) + 1
+                    lines = f.readlines()
+                    start = 0 if len(lines) < 2 else int(lines[-1].split(',')[0]) + 1
             else:
                 start = 0
             print(dataset_name, 'i_start', start)
