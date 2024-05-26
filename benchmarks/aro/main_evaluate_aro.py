@@ -569,7 +569,7 @@ class ARO_generative_evaluation:
             with open(log_file_path, 'a+') as f:
                 if not use_existing_file:
                     f.write('id,correct\n')
-                for i, example in tqdm(enumerate(dataset, total=len(dataset))):
+                for i, example in tqdm(enumerate(dataset), total=len(dataset)):
                     if i < start:
                         continue
                     image_options = example['image_options']
