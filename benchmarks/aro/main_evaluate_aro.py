@@ -580,6 +580,7 @@ class ARO_generative_evaluation:
             for i, example in tqdm(enumerate(dataset)):
                 if i < start:
                     continue
+                
                 image_options = example['image_options']
                 caption_options = example['caption_options']                
                 if self.evaluation_type == 'logits':
