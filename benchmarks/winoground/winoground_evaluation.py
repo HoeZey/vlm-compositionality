@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import random
 import re
+from fewshot.examples import get_examples
 
 from transformers import LlamaTokenizerFast
 
@@ -142,6 +143,7 @@ class Winoground_generative_evaluation:
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
         self.no_hard_negatives = no_hard_negatives
+        self.cogvlm_history = None
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Tokens
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
         random.seed(2023)
@@ -255,18 +257,21 @@ class Winoground_generative_evaluation:
 
         self.rag_fewshot_negatives = rag_fewshot_negatives
 
-        
-        with open("vlm-compositionality/fewshot/images/captions_dalle.json", 'r') as f:
-            captions_pairs = json.load(f)
 
-        synthetic_examples = []
-        for captions in captions_pairs.values():
-            example = {}
-            for i, (img_file, capts) in enumerate(captions.items()):
-                example['image'] = Image.open(f'./fewshot/images/{img_file}')
-                example['caption_A'] = capts[0]
-                example['caption_B'] = capts[1]
-            synthetic_examples.append(example)
+        
+        # with open("/home/mnulli/vlm-compositionality/fewshot/images/captions_dalle.json", 'r') as f:
+        #     captions_pairs = json.load(f)
+
+        # synthetic_examples = []
+        # for captions in captions_pairs.values():
+        #     example = {}
+        #     for i, (img_file, capts) in enumerate(captions.items()):
+        #         example['image'] = Image.open(f'./fewshot/images/{img_file}')
+        #         example['caption_A'] = capts[0]
+        #         example['caption_B'] = capts[1]
+        #     synthetic_examples.append(example)
+        synthetic_examples = get_examples()
+
 
         self.synthetic_examples = synthetic_examples
 
@@ -518,12 +523,12 @@ class Winoground_generative_evaluation:
                 prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
                 prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
             
-            prompt += ("USER: \nGiven an image and a caption," 
+            prompt += ("<image> \nGiven an image and a caption," 
             "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
             "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
-            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            prompt += f"The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
 
             # inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -607,18 +612,20 @@ class Winoground_generative_evaluation:
                 c0 = x['caption_A']
                 c1 = x['caption_B']
                 fewshot_images.append(x['image'])
+                # print("fewshot_images", fewshot_images)
+                # fewshot_images = fewshot_images.append(x['image'])
                 prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
                 prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
             
-            prompt += ("USER: \nGiven an image and a caption," 
+            prompt += ("\n Given an image and a caption," 
             "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
             "and analyze the caption against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
             "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
-            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
+            prompt += f"<image> The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
 
-        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot":
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "synth":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
@@ -802,24 +809,125 @@ class Winoground_generative_evaluation:
             prompt += "Caption: " + caption.strip() + "\n"
             prompt += "Answer:"
             max_new_tokens = 35
-        ##icl arises form data
+
+        # elif self.prompt_name == "synth":
+        #     prompt = "Question: Does the image match the caption?.\n"
+        #     fewshot_images = []
+        #     for x in self.synthetic_examples:
+        #         c0 = x['caption_A']
+        #         c1 = x['caption_B']
+        #         fewshot_images.append(x['image'])
+        #         prompt += f"<image> The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+        #         prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+        #     prompt += ("\n Given an image and a caption," 
+        #     "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+        #     "and analyze the caption against the image. Begin by describing the key elements "
+        #     "visible in the image. Then, compare these elements with the details mentioned in "
+        #     "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+        #     prompt += f"<image> The caption is: {caption.strip()}. Answer: "
+        #     max_new_tokens = 500
+        # ##icl arises form data
         ##why BLIP2 fails? dataset
 
+        elif self.prompt_name == "synth":
+            if self.cogvlm_history is None:
+                history = []
+                # synth2 = [item for item in self.synthetic_examples for _ in range(2)]
+                # print(synth2)
+                for x in self.synthetic_examples:
+                    random_order = random.randint(0, 1)
+                    if random_order == 0:
+                        c0 = x['caption_A']
+                        c1 = x['caption_B']
+                        c0_c = "<Yes>"
+                        c1_c = "<No>"
+                    else:
+                        c0 = x['caption_B']
+                        c1 = x['caption_A']
+                        c0_c = "<No>"
+                        c1_c = "<Yes>" 
+                    # correct_option = 'B'
+                    prompt = "Question: Does the image match the caption?.\n"
+                    prompt += f"<image>. The caption is: {c0.strip()}. The answer is {c0_c}.\n"
+                    prompt += f"The caption is: {c1.strip()}. The answer is {c1_c}.\n"
+                    prompt += "Summarize your observations and reasoning for each choice in 100 words.\n"
+                    prompt += "Answer:"
+                    input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=history, images=[x['image']])
+                    inputs = {
+                        'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                        'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                        'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                        'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+                    }
+
+                    if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                        inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+                    # add any transformers params here.
+                    gen_kwargs = {"max_length": 4096,
+                                  "do_sample": False} # "temperature": 0.9
+                    
+                    output = self.model.generate(**inputs, **gen_kwargs)
+                    output = output[:, inputs['input_ids'].shape[1]:]
+                    output = self.tokenizer.decode(output[0])
+                    output = output.split("</s>")[0]
+                    
+                    query = prompt.replace("<image>. ", "")
+                    print(query)
+                    print(output)
+
+                    history.append((query, output))
+                
+                self.cogvlm_history = history
+            
+            prompt = ("USER: \nSimilarly, given an image and a caption choose the correct caption."
+            "Think step-by-step and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. Clearly state your final answer as a single character either <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt +=  caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=self.cogvlm_history, images=[image])
+            
+            inputs = {
+                'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+            }
+            if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+            outputs = self.model(**inputs)
+            logits = outputs.logits.squeeze()
+            yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+            no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
+
+            return yes_logits
+
         # self.model.to(device)
-        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "synth":
+            # fewshot_images = fewshot_images.append(image)
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        
+        # inputs = self.processor(images=image, text=prompt, return_tensors="pt")
 
-        # contrastive:
-        use_auth_token = "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"
-        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
-        prompt = "Yes"
-        inputs_language = tokenizer(prompt, return_tensors="pt")
-        print("inputs_language", inputs_language)
+        # # contrastive:
+        # use_auth_token = "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"
+        # tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        # prompt = "Yes"
+        # inputs_language = tokenizer(prompt, return_tensors="pt")
+        # print("inputs_language", inputs_language)
 
-        use_auth_token = "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"
-        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
-        prompt = "No"
-        inputs_language = tokenizer(prompt, return_tensors="pt")
-        print("inputs_language", inputs_language)
+        # use_auth_token = "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"
+        # tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
+        # prompt = "No"
+        # inputs_language = tokenizer(prompt, return_tensors="pt")
+        # print("inputs_language", inputs_language)
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
@@ -1023,22 +1131,129 @@ class Winoground_generative_evaluation:
             "the caption. After providing a brief explanation of your reasoning (less then 200 characters), clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
+        
+        # elif self.prompt_name == "synth":
+        #     prompt = "USER: Does the image match the caption?.\n"
+        #     fewshot_images = []
+        #     # print("self.synthetic_examples", self.synthetic_examples)
+        #     for x in self.synthetic_examples:
+        #         print("x", x)
+        #         c0 = x['caption_A']
+        #         c1 = x['caption_B']
+        #         fewshot_images.append(x['image'])
+        #         print("fewshot_images", fewshot_images) 
+        #         # fewshot_images = fewshot_images.append(x['image'])
+
+        #         prompt += f"<EOI> <image>. The caption is: <EOI>{c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+        #         prompt += f"The caption is: <EOI>{c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+            
+        #     prompt += ("\n Given an image and a caption," 
+        #     "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+        #     "and analyze the caption against the image. Begin by describing the key elements "
+        #     "visible in the image. Then, compare these elements with the details mentioned in "
+        #     "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+        #     prompt += f"<EOI> <image> The caption is: {caption.strip()}. ASSISTANT: "
+        #     max_new_tokens = 500
+
+        elif self.prompt_name == "synth":
+            if self.cogvlm_history is None:
+                history = []
+                # synth2 = [item for item in self.synthetic_examples for _ in range(2)]
+                # print(synth2)
+                for x in self.synthetic_examples:
+                    random_order = random.randint(0, 1)
+                    # if random_order == 0:
+                    #     c0 = x['caption_A']
+                    #     c1 = x['caption_B']
+                    #     c0_c = "<Yes>"
+                    #     c1_c = "<No>"
+                    # else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    c0_c = "<No>"
+                    c1_c = "<Yes>" 
+                    # correct_option = 'B'
+                    prompt = "USER: Does the image match the caption?.\n"
+                    prompt += f"<image>. The caption is: {c0.strip()}. The answer is {c0_c}.\n"
+                    prompt += f"The caption is: {c1.strip()}. The answer is {c1_c}.\n"
+                    prompt += "Summarize your observations and reasoning for each choice in 100 words.\n"
+                    prompt += "ASSISTANT:"
+                    input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=history, images=[x['image']])
+                    inputs = {
+                        'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                        'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                        'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                        'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+                    }
+
+                    if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                        inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+                    # add any transformers params here.
+                    gen_kwargs = {"max_length": 4096,
+                                  "do_sample": False} # "temperature": 0.9
+                    
+                    output = self.model.generate(**inputs, **gen_kwargs)
+                    output = output[:, inputs['input_ids'].shape[1]:]
+                    output = self.tokenizer.decode(output[0])
+                    output = output.split("</s>")[0]
+                    
+                    query = prompt.replace("<image>. ", "")
+                    print(query)
+                    print(output)
+
+                    history.append((query, output))
+                
+                self.cogvlm_history = history
+            
+            prompt = ("USER: \nSimilarly, given an image and a caption choose the correct caption."
+            "Think step-by-step and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. Clearly state your final answer as a single character either <Yes> or <No>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt +=  caption.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=self.cogvlm_history, images=[image])
+            
+            inputs = {
+                'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+            }
+            if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+            outputs = self.model(**inputs)
+            logits = outputs.logits.squeeze()
+            yes_logits = torch.mean(logits[:, 22483]) ## 22483 is the token id for 'Yes' based on llama2 tokenizer
+            no_logtis = torch.mean(logits[:, 1939]) ## 1939 is the token id for 'No' based on llama2 tokenizer
+
+            return yes_logits
+
+        else:
+            print("Prompt type not supported!")
 
         
-        if self.prompt_name == "rag-few-shot":
-            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=fewshot_images + [image])
-        else:
-            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        # if self.prompt_name == "rag-few-shot" or self.prompt_name == "synth":
+        #     fewshot_images = fewshot_images + [image]
+        #     print("fewshot_images", fewshot_images)
+        #     print('fewshot_images.shape', len(fewshot_images))
+        #     input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[fewshot_images])
+        # else:
+        #     input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
 
-        # input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
-        inputs = {
-            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
-            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
-            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
-            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
-        }
-        if 'cross_images' in input_by_model and input_by_model['cross_images']:
-            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+        # # input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+        # inputs = {
+        #     'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+        #     'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+        #     'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+        #     # 'images' : fewshot_images,
+        #     'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+        # }
+        # if 'cross_images' in input_by_model and input_by_model['cross_images']:
+        #     inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
 
 
         # if self.prompt_name == "few-shot":
@@ -1064,8 +1279,8 @@ class Winoground_generative_evaluation:
         random.seed(2023)
         subset_idx = random.sample(range(len(winoground)), 300)
         # subset_idx = range(len(winoground))
-        subset_idx = subset_idx[:100]
-        #taking the first 20 for time purposes
+        subset_idx = subset_idx[:50]
+        # taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
             text_correct_count = 0
@@ -1078,14 +1293,28 @@ class Winoground_generative_evaluation:
                 image_0 = winoground[idx]["image_0"].convert("RGB")
                 # image_1 = winoground[idx]["image_1"].convert("RGB")
                 caption_0 = winoground[idx]["caption_0"]
-                image_1 = winoground[idx]["image_1"].convert("RGB")
-                caption_1 = winoground[idx]["caption_1"]
-                # print("caption_1", caption_1)
+                print("caption_0", caption_0)
+                if self.no_hard_negatives:
+                    # print("using no Hard negatives")
+                    if idx+1 < len(winoground):
+                        print("idx+1", idx+1)
+                        image_1 = winoground[idx+1]["image_1"].convert("RGB")
+                        caption_1 = winoground[idx+1]["caption_1"]
+                        print("caption_1", caption_1)
+                    else:
+                        print("idx-1", idx-1)
+                        image_1 = winoground[idx-1]["image_1"].convert("RGB")
+                        caption_1 = winoground[idx-1]["caption_1"]
+                        print("caption_1", caption_1)
+                else:
+                    image_1 = winoground[idx]["image_1"].convert("RGB")
+                    caption_1 = winoground[idx]["caption_1"]
+                    print("caption_1", caption_1)
+        
                 print ("Example: #", total)
-                # self.show_example(benchmark=winoground, idx=idx)
+
                 result = {}
-                # try:
-                ## map string results to nemurical
+
                 if self.model_name == "llava-hf/llava-1.5-7b-hf": 
                     captioner = self.llava_image_to_caption_logits
 
@@ -1107,6 +1336,8 @@ class Winoground_generative_evaluation:
 
                 total += 1
                 print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
+
+            return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
 
 
         if self.evaluation_type == "text_image_group_score":
@@ -1223,4 +1454,4 @@ class Winoground_generative_evaluation:
 
 
         
-        return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
+            return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}

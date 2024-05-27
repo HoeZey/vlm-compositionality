@@ -3,9 +3,13 @@ from tqdm import tqdm
 import torch
 import open_clip
 from datasets import load_dataset
-
+import pandas as pd
 from transformers import AutoTokenizer, LlamaForCausalLM, BertTokenizer
 import re
+from PIL import Image
+import json
+import random
+
 
 class SugarCrepe_evaluation:
     """
@@ -121,109 +125,21 @@ class SugarCrepe_generative_evaluation:
         self.device = device
         self.prompt_name = prompt_name  
         self.evaluation_type = evaluation_type
+        self.cogvlm_history = None
 
-        # self.fewshot_data = fewshot_data[:n_shot]
-
-        ## Retrieval augmented generation
+        with open("fewshot/captions_dalle.json", 'r') as f:
+            captions_pairs = json.load(f)
         
-        
-        im1 = Image.open(
-        requests.get(
-            "http://images.cocodataset.org/val2017/000000039769.jpg", stream=True
-            ).raw
-        )
-        im2 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000028137.jpg",
-                stream=True
-            ).raw
-        )
-        im3 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000028352.jpg", 
-                stream=True
-            ).raw
-        )
+        synthetic_examples = []
+        for captions in captions_pairs.values():
+            example = {}
+            for i, (img_file, capts) in enumerate(captions.items()):
+                example['image'] = Image.open(f'./fewshot/images/{img_file}')
+                example['caption_A'] = capts[0]
+                example['caption_B'] = capts[1]
+            synthetic_examples.append(example)
 
-        im4 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000000442.jpg", 
-                stream=True
-            ).raw
-        )
-
-        im5 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000000448.jpg", 
-                stream=True
-            ).raw
-        )
-
-        caption_1 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
-        caption_2 = "A bathroom with a sink, cabinet, mirror and a shower curtain."
-        caption_3 = "A table full of salty and sweet food inside a cozy room."
-        caption_4 = "A room full of compute screens and some people working on them."
-        caption_5 = "A group of women talking about environmental issues while sitting at a table."
-
-        
-
-        rag_fewshot = []
-        rag_fewshot.append({"image": im1, "caption": caption_1})
-        rag_fewshot.append({"image": im2, "caption": caption_2})
-        rag_fewshot.append({"image": im3, "caption": caption_3})
-        rag_fewshot.append({"image": im4, "caption": caption_4})
-        rag_fewshot.append({"image": im5, "caption": caption_5})
-
-        self.rag_fewshot = rag_fewshot
-
-        ## Retrieval augmented generation with negatives
-
-        im1 = Image.open(
-        requests.get(
-            "http://images.cocodataset.org/test-stuff2017/000000000870.jpg", stream=True
-            ).raw
-        )
-        im2 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000000527.jpg",
-                stream=True
-            ).raw
-        )
-        im3 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000001227.jpg", 
-                stream=True
-            ).raw
-        )
-
-        im4 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000001331.jpg", 
-                stream=True
-            ).raw
-        )
-
-        im5 = Image.open(
-            requests.get(
-                "http://images.cocodataset.org/test-stuff2017/000000001574.jpg", 
-                stream=True
-            ).raw
-        )
-
-        caption_1 = "The giraffe is on top of the trees."
-        caption_2 = "The zebra is outside the cage."
-        caption_3 = "The kite is carrying the lady."
-        caption_4 = "The ball is in the air, and the boys are running from it."
-        caption_5 = "The computer is under the shelf."
-
-        rag_fewshot_negatives = []
-        rag_fewshot_negatives.append({"image": im1, "caption": caption_1})
-        rag_fewshot_negatives.append({"image": im2, "caption": caption_2})
-        rag_fewshot_negatives.append({"image": im3, "caption": caption_3})
-        rag_fewshot_negatives.append({"image": im4, "caption": caption_4})
-        rag_fewshot_negatives.append({"image": im5, "caption": caption_5})
-
-        self.rag_fewshot_negatives = rag_fewshot_negatives
+        self.synthetic_examples = synthetic_examples
 
     @torch.no_grad()
     def llava_caption_choice(self, image, caption_0, caption_1):
@@ -292,54 +208,8 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
-
-        elif self.prompt_name == "rag-few-shot":
-            prompt = "USER: Does the image match the caption?.\n"
-            fewshot_images = []
-            for x in self.rag_fewshot:
-                c0 = x['caption']
-                fewshot_images.append(x['image'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
-
-            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
-              "which caption is the better description of the given image? Think step-by-step "
-              "and analyze each caption against the image. Begin by describing the key elements "
-              "visible in the image. Then, compare these elements with the details mentioned in "
-              "each caption to determine which one matches better. After providing a detailed "
-              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
-            prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 100
-
-        elif self.prompt_name == "rag-few-shot-negatives":
-            prompt = "USER: Does the image match the caption?.\n"
-            fewshot_images = []
-            for x in self.rag_fewshot:
-                c0 = x['caption']
-                fewshot_images.append(x['image'])
-                # fewshot_images.append(x['image_1'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <YES>.\n"
-
-            for x in self.rag_fewshot_negatives:
-                c0 = x['caption']
-                fewshot_images.append(x['image'])
-                # fewshot_images.append(x['image_1'])
-                prompt += f"<image>. The caption is: {c0.strip()}. The Caption does not match the image, the answer is <NO>.\n"
-
-            prompt += ("USER: \nGiven this image and a caption," 
-            "does the caption accurately describe of the given image? Analyze each caption against the image. Think step-by-step"
-            "and analyze the caption against the image. Begin by describing the key elements "
-            "visible in the image. Then, compare these elements with the details mentioned in "
-            "the caption. After providing a detailed explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
-            prompt += f"<image> The description of the Image is: {caption.strip()}. ASSISTANT: "
-            max_new_tokens = 100
-
-
-        if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "rag-few-shot-negatives":
-            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
-        else:
-            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
         
-        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
@@ -356,22 +226,50 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        elif self.prompt_name == "synth":
+            prompt = "USER: Match the given image with the correct caption.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                random_order = random.randint(0, 1)
+                if random_order == 0:
+                    c0 = x['caption_A']
+                    c1 = x['caption_B']
+                    correct_option = 'A'
+                else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    correct_option = 'B'
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
+                prompt += f"<image>. The correct caption is: {correct_option}\n"
+            
+            prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             print("Prompt type not supported!")
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         
         # Contrast logits
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
         a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
         b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits
-    
     
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1):
@@ -400,10 +298,39 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        elif self.prompt_name == "synth":
+            prompt = "USER: Match the given image with the correct caption.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                random_order = random.randint(0, 1)
+                if random_order == 0:
+                    c0 = x['caption_A']
+                    c1 = x['caption_B']
+                    correct_option = 'A'
+                else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    correct_option = 'B'
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
+                prompt += f"<image>. The correct caption is: {correct_option}\n"
+            
+            prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             print("Prompt type not supported!")
 
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # use_auth_token = "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"
         # tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased", use_auth_token=use_auth_token)
@@ -424,14 +351,13 @@ class SugarCrepe_generative_evaluation:
         # print("logits.shape", logits.shape)
         a_logits = torch.mean(logits[:, 1037]) ## 1037 is the token id for 'A' based on bert tokenizer
         b_logits = torch.mean(logits[:, 1038]) ## 1038 is the token id for 'B' based on bert tokenizer
-        print("a_logits", a_logits)
-        print("b_logits", b_logits)
-        print("a_logits.shape", a_logits.shape)
-        print("b_logits.shape", b_logits.shape)
+        # print("a_logits", a_logits)
+        # print("b_logits", b_logits)
+        # print("a_logits.shape", a_logits.shape)
+        # print("b_logits.shape", b_logits.shape)
 
         return a_logits, b_logits        
   
-
     @torch.no_grad()
     def cogvlm_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
@@ -463,35 +389,7 @@ class SugarCrepe_generative_evaluation:
 
         print(output)
         output = output.split("</s>")[0]
-        return output
-
-    @torch.no_grad()
-    def cogvlm_caption_logits(self, image, caption_0, caption_1):
-        if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
-            prompt += "ASSISTANT:"
-            max_new_tokens = 35
-        else:
-            print("Prompt type not supported!")
-        
-        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
-        inputs = {
-            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
-            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
-            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
-            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
-        }
-        if 'cross_images' in input_by_model and input_by_model['cross_images']:
-            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
-
-        outputs = self.model(**inputs)
-        logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
-
-        return a_logits, b_logits        
+        return output     
 
 
     @torch.no_grad()
@@ -502,57 +400,104 @@ class SugarCrepe_generative_evaluation:
             prompt += "B. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-        else:
-            print("Prompt type not supported!")
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+            inputs = {
+                'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+            }
+            if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+            outputs = self.model(**inputs)
+            logits = outputs.logits.squeeze()
+            a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+            b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+
+            return a_logits, b_logits
         
-        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
-        inputs = {
-            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
-            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
-            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
-            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
-        }
-        if 'cross_images' in input_by_model and input_by_model['cross_images']:
-            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+        elif self.prompt_name == "synth":
+            if self.cogvlm_history is None:
+                history = []
+                for x in self.synthetic_examples:
+                    random_order = random.randint(0, 1)
+                    if random_order == 0:
+                        c0 = x['caption_A']
+                        c1 = x['caption_B']
+                        correct_option = 'A'
+                    else:
+                        c0 = x['caption_B']
+                        c1 = x['caption_A']
+                        correct_option = 'B'
+                    prompt = "USER: Match the given image with the correct caption.\n"
+                    prompt += "A. " + c0 + "\n"
+                    prompt += "B. " + c1 + "\n" 
+                    prompt += f"<image>. The correct caption is: {correct_option}.\n"
+                    prompt += "Summarize your observations and reasoning for this choice in 100 words.\n"
+                    prompt += "ASSISTANT:"
+                    input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=history, images=[x['image']])
+                    inputs = {
+                        'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                        'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                        'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                        'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+                    }
 
-        outputs = self.model(**inputs)
-        logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+                    if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                        inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
 
-        return a_logits, b_logits        
+                    # add any transformers params here.
+                    gen_kwargs = {"max_length": 4096,
+                                  "do_sample": False} # "temperature": 0.9
+                    
+                    output = self.model.generate(**inputs, **gen_kwargs)
+                    output = output[:, inputs['input_ids'].shape[1]:]
+                    output = self.tokenizer.decode(output[0])
+                    output = output.split("</s>")[0]
+                    
+                    query = prompt.replace("<image>. ", "")
+                    print(query)
+                    print(output)
 
-
-    @torch.no_grad()
-    def cogvlm_caption_logits(self, image, caption_0, caption_1):
-        if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
+                    history.append((query, output))
+                
+                self.cogvlm_history = history
+            
+            prompt = ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
-            max_new_tokens = 35
+            max_new_tokens = 500
+            input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=self.cogvlm_history, images=[image])
+            
+            inputs = {
+                'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
+                'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
+                'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
+                'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
+            }
+            if 'cross_images' in input_by_model and input_by_model['cross_images']:
+                inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
+
+            outputs = self.model(**inputs)
+            logits = outputs.logits.squeeze()
+            a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+            b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+
+            return a_logits, b_logits   
         else:
             print("Prompt type not supported!")
         
-        input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
-        inputs = {
-            'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
-            'token_type_ids': input_by_model['token_type_ids'].unsqueeze(0).to(self.device),
-            'attention_mask': input_by_model['attention_mask'].unsqueeze(0).to(self.device),
-            'images': [[input_by_model['images'][0].to(self.device).to(self.torch_type)]] if image is not None else None,
-        }
-        if 'cross_images' in input_by_model and input_by_model['cross_images']:
-            inputs['cross_images'] = [[input_by_model['cross_images'][0].to(self.device).to(self.torch_type)]]
-
-        outputs = self.model(**inputs)
-        logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
-
-        return a_logits, b_logits        
+        # input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
+            
 
 
-    def evaluate_sugarcrepe(self, resume_from_checkpoint=True):
+    def evaluate_sugarcrepe(self, resume_from_checkpoint=False):
         sugarcrepe = {
             'add_obj'    : load_dataset("HuggingFaceM4/SugarCrepe_add_obj", trust_remote_code=True)["test"],
             'add_att'    : load_dataset("HuggingFaceM4/SugarCrepe_add_att", trust_remote_code=True)["test"],
@@ -571,8 +516,7 @@ class SugarCrepe_generative_evaluation:
             captioner = self.blip2_caption_choice
         elif self.model_name == "THUDM/cogvlm-chat-hf":
             captioner = self.cogvlm_caption_choice
-
-
+        
         if self.evaluation_type == "logits":
             if self.model_name == "llava-hf/llava-1.5-7b-hf":
                 captioner = self.llava_caption_logits
@@ -581,47 +525,54 @@ class SugarCrepe_generative_evaluation:
             elif self.model_name == "THUDM/cogvlm-chat-hf":
                 captioner = self.cogvlm_caption_logits
 
-            for c, data_dict in sugarcrepe.items():                
-                correct_cnt = 0
-                idx_limit = 20
-                iter_cnt = 0
-
+            for c, data_dict in sugarcrepe.items():    
                 model_name_short = self.model_name.split("/")[1].split('-')[0]
-                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{c}_log.csv'
+                log_file_path = f'./log_run/{model_name_short}/sugarcrepe/{self.evaluation_type}_{c}_log.csv'
                 
-                if os.path.exists(log_file_path) and resume_from_checkpoint:
+                use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+                if use_existing_file:
                     with open(log_file_path, 'r') as f:
                         start = int(f.readlines()[-1].split(',')[0]) + 1
                 else:
                     start = 0
+                print(c, 'i_start', start)
+                with open(log_file_path, 'a+') as f:
+                    if not use_existing_file:
+                        f.write('id,correct\n')
+            
+                    for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
+                        if i < start:
+                            continue
 
-                with(log_file_path) as f:
-                    if not resume_from_checkpoint:
+                        print(data['image'])
+                        answerA, answerB = captioner(data['image'].convert('RGB'), data['tested_labels'][0], data['tested_labels'][1])
+                        correct = int(answerA > answerB)
+
+                        f.write(f'{i},{correct}\n')
+
+                metrics[c] = pd.read_csv(log_file_path)['correct'].mean()
+                print(metrics[c])
+        else:
+            for c, data_dict in sugarcrepe.items():                
+                model_name_short = self.model_name.split("/")[1].split('-')[0]
+                log_file_path = f'./outputs/log_run/{model_name_short}/sugarcrepe/{self.evaluation_type}_{c}_log.csv'
+
+                use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+                if use_existing_file:
+                    with open(log_file_path, 'r') as f:
+                        start = int(f.readlines()[-1].split(',')[0]) + 1
+                else:
+                    start = 0
+                print(c, 'i_start', start)
+                with open(log_file_path, 'a+') as f:
+                    if not use_existing_file:
                         f.write('id,correct')
 
-                    for i, data in tqdm(enumerate(data_dict[start:]), desc=f'evaluating {c}'):
-                        i += start
+                    for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
+                        if i < start:
+                          continue
                         correct = 0
-                        answerA, answerB = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
-                        if answerA > answerB:
-                            correct = 1
-                        correct_cnt += correct
-                        iter_cnt += 1
-                        if iter_cnt >= idx_limit:
-                            break
-                    # count = len(data_dict)
-                        f.write(f'{i},{correct}\n')
-                    count = idx_limit
-                    metrics[c] = correct_cnt / count      
-            else:
-                for c, data_dict in sugarcrepe.items():
-                    correct_cnt = 0
-                    idx_limit = 10
-                    # idx_limit = len(data_dict)
-                    iter_cnt = 0
-                    for i, data in tqdm(enumerate(data_dict), desc=f'evaluating {c}'):
-                        i += start
-                        correct = 0
+
                         answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
                         # if answer[0].lower() == 'a':
                         if 'cot' in self.prompt_name:
@@ -637,15 +588,10 @@ class SugarCrepe_generative_evaluation:
                                 correct = 1
                             else:
                                 correct = 0
-
-                        correct_cnt += correct
-                        iter_cnt += 1
-                        if iter_cnt >= idx_limit:
-                            break
                         f.write(f'{i},{correct}\n')
-                    # count = len(data_dict)
-                    count = idx_limit
-                    metrics[c] = correct_cnt / count
-                    
+                # count = len(data_dict)
+                metrics[c] = pd.read_csv(log_file_path)['correct'].mean()
+                print(metrics[c])
+
         print(metrics)
         return {"SugarCrepe_accuracies": metrics}

@@ -65,6 +65,7 @@ def main(_A: argparse.Namespace):
             # PROMPT_LIST = ["rag-few-shot"]
             # PROMPT_LIST = ["gpt4-smallerprompt"]
         else: 
+            PROMPT_LIST = ["synth"]
             PROMPT_LIST = ["gpt4-shorterprompt"]
     
     
@@ -113,6 +114,7 @@ def main(_A: argparse.Namespace):
             for benchmark in BENCHMARKS_LIST:                                   
                 if benchmark == "winoground":
                     print(model_name)
+                    print(PROMPT_LIST)
                     # print(model)
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type, _A.no_hard_negatives)
                     eval_results = benchmark_module.evaluate_winoground()
