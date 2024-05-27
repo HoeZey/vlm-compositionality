@@ -13,6 +13,7 @@ import re
 from torch.utils.data import DataLoader
 import open_clip
 from torchvision import transforms
+import random
 
 from benchmarks.aro.misc import seed_all, _default_collate
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
@@ -331,39 +332,45 @@ class ARO_generative_evaluation:
             prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.synthetic_examples:
-                c0 = x['caption_A']
-                c1 = x['caption_B']
+                random_order = random.randint(0, 1)
+                if random_order == 0:
+                    c0 = x['caption_A']
+                    c1 = x['caption_B']
+                    correct_option = 'A'
+                else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    correct_option = 'B'
                 fewshot_images.append(x['image'])
-                prompt += "A. " + c0.strip() + "\n"
-                prompt += "B. " + c1.strip() + "\n"
-                prompt += f"<image>. Caption A. matches the image, the answer is <A.>.\n"
-
-            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
-              "which caption is the better description of the given image? Think step-by-step "
-              "and analyze each caption against the image. Begin by describing the key elements "
-              "visible in the image. Then, compare these elements with the details mentioned in "
-              "each caption to determine which one matches better. After providing a detailed "
-              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
-            prompt += "A. " + c0.strip() + "\n"
-            prompt += "B. " + c1.strip() + "\n"
-            prompt += f"<image> ASSISTANT: "
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
+                prompt += f"<image>. The correct caption is: {correct_option}\n"
+            
+            prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            prompt += f"<image>. The caption is: "
+            prompt += "A. " + caption_0.strip() + "\n"
+            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "ASSISTANT:"
             max_new_tokens = 500
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             print("Prompt type not supported!")
-
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         
         # Contrast logits
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
         a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
         b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
-        return a_logits, b_logits 
+        return a_logits, b_logits
 
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe
@@ -566,32 +573,33 @@ class ARO_generative_evaluation:
             else:
                 start = 0
             print(dataset_name, 'i_start', start)
-            with open(log_file_path, 'a+') as f:
-                if not use_existing_file:
+            if not use_existing_file:
+                with open(log_file_path, 'a+') as f:
                     f.write('id,correct\n')
-                for i, example in tqdm(enumerate(dataset, total=len(dataset))):
-                    if i < start:
-                        continue
-                    image_options = example['image_options']
-                    caption_options = example['caption_options']                
-                    if self.evaluation_type == 'logits':
-                        answerA, answerB = captioner(image_options[0], caption_options[0], caption_options[1])
-                        correct = int(answerA > answerB)
-                    elif 'cot' in self.prompt_name:
-                        answer = captioner(image_options[0], caption_options[0], caption_options[1])
-                        match = re.search('<A>', answer)
-                        if match :
-                            correct = 1
-                        elif re.search(' A ', answer) and not re.search('Caption A', answer):
-                            correct = 1
-                        else:
-                            correct = 0
+            for i, example in tqdm(enumerate(dataset)):
+                if i < start:
+                    continue
+                image_options = example['image_options']
+                caption_options = example['caption_options']                
+                if self.evaluation_type == 'logits':
+                    answerA, answerB = captioner(image_options[0], caption_options[0], caption_options[1])
+                    correct = int(answerA > answerB)
+                elif 'cot' in self.prompt_name:
+                    answer = captioner(image_options[0], caption_options[0], caption_options[1])
+                    match = re.search('<A>', answer)
+                    if match :
+                        correct = 1
+                    elif re.search(' A ', answer) and not re.search('Caption A', answer):
+                        correct = 1
                     else:
-                        answer = captioner(image_options[0], caption_options[0], caption_options[1])
-                        if answer[0].lower() == 'a':
-                            correct = 1
-                        else:
-                            correct = 0
+                        correct = 0
+                else:
+                    answer = captioner(image_options[0], caption_options[0], caption_options[1])
+                    if answer[0].lower() == 'a':
+                        correct = 1
+                    else:
+                        correct = 0
+                with open(log_file_path, 'a+') as f:
                     f.write(f'{i},{correct}\n')
 
             metrics[dataset_name] = pd.read_csv(log_file_path)['correct'].mean()
