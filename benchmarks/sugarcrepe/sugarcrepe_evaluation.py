@@ -580,16 +580,20 @@ class SugarCrepe_generative_evaluation:
         # input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
                
 
-    def evaluate_sugarcrepe(self, resume_from_checkpoint=True):
-        sugarcrepe = {
-            'add_obj'    : load_dataset("HuggingFaceM4/SugarCrepe_add_obj", trust_remote_code=True)["test"],
-            'add_att'    : load_dataset("HuggingFaceM4/SugarCrepe_add_att", trust_remote_code=True)["test"],
-            # 'replace_obj': load_dataset("HuggingFaceM4/SugarCrepe_replace_obj", trust_remote_code=True)["test"],
-            # 'replace_att': load_dataset("HuggingFaceM4/SugarCrepe_replace_att", trust_remote_code=True)["test"],
-            # 'replace_rel': load_dataset("HuggingFaceM4/SugarCrepe_replace_rel", trust_remote_code=True)["test"],
-            # 'swap_obj'   : load_dataset("HuggingFaceM4/SugarCrepe_swap_obj", trust_remote_code=True)["test"],
-            # 'swap_att'   : load_dataset("HuggingFaceM4/SugarCrepe_swap_att", trust_remote_code=True)["test"],
-        }
+    def evaluate_sugarcrepe(self, subsets, resume_from_checkpoint=True):
+        sugarcrepe = {}
+
+        for subset_name in subsets:
+            sugarcrepe[subset_name] = load_dataset(f"HuggingFaceM4/SugarCrepe_{subset_name}", trust_remote_code=True)["test"]
+        # sugarcrepe = {
+        #     'add_obj'    : load_dataset("HuggingFaceM4/SugarCrepe_add_obj", trust_remote_code=True)["test"],
+        #     'add_att'    : load_dataset("HuggingFaceM4/SugarCrepe_add_att", trust_remote_code=True)["test"],
+        #     # 'replace_obj': load_dataset("HuggingFaceM4/SugarCrepe_replace_obj", trust_remote_code=True)["test"],
+        #     # 'replace_att': load_dataset("HuggingFaceM4/SugarCrepe_replace_att", trust_remote_code=True)["test"],
+        #     # 'replace_rel': load_dataset("HuggingFaceM4/SugarCrepe_replace_rel", trust_remote_code=True)["test"],
+        #     # 'swap_obj'   : load_dataset("HuggingFaceM4/SugarCrepe_swap_obj", trust_remote_code=True)["test"],
+        #     # 'swap_att'   : load_dataset("HuggingFaceM4/SugarCrepe_swap_att", trust_remote_code=True)["test"],
+        # }
 
         metrics = {}
 

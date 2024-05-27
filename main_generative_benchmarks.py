@@ -20,6 +20,7 @@ _AA = parser.add_argument
 _AA("--model_list", nargs='+', help="List of models to evaluate.")
 _AA("--benchmark_list", nargs='+', default=None, help="List of benchmarks to evaluate models on.")
 _AA("--prompt_type_list", nargs='+', default=None, help="List of prompt types.")
+_AA("--sugarcrepe_subsets", nargs='+', default=None, help="List of SugarCrepe subsets to evaluate.")
 _AA("--aro_subsets", nargs='+', default=None, help="List of ARO subsets to evaluate.")
 _AA("--evaluation_type", help="Evaluation mode to activate. Accuracy overall or text/image/group scores.")
 _AA("--no_hard_negatives", help="Evaluation mode in which caption and image pairs are swapped with ones from different examples.")
@@ -120,7 +121,7 @@ def main(_A: argparse.Namespace):
                 
                 elif benchmark == "sugarcrepe":
                     benchmark_module = SugarCrepe_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type)
-                    eval_results = benchmark_module.evaluate_sugarcrepe()
+                    eval_results = benchmark_module.evaluate_sugarcrepe(subsets=_A.sugarcrepe_subsets)
                     wandb.log({'Sugarcrepe_add-obj' : eval_results['SugarCrepe_accuracies']['add_obj']})
                     wandb.log({'Sugarcrepe_add_att' : eval_results['SugarCrepe_accuracies']['add_att']})
                     wandb.log({'Sugarcrepe_replace_obj' : eval_results['SugarCrepe_accuracies']['replace_obj']})
