@@ -322,9 +322,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def llava_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
+            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
+            prompt += "First. " + caption_0 + "\n"
+            prompt += "Second. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -336,23 +336,23 @@ class ARO_generative_evaluation:
                 if random_order == 0:
                     c0 = x['caption_A']
                     c1 = x['caption_B']
-                    correct_option = 'A'
+                    correct_option = 'First'
                 else:
                     c0 = x['caption_B']
                     c1 = x['caption_A']
-                    correct_option = 'B'
+                    correct_option = 'Second'
                 fewshot_images.append(x['image'])
-                prompt += "A. " + c0 + "\n"
-                prompt += "B. " + c1 + "\n" 
+                prompt += "First. " + c0 + "\n"
+                prompt += "Second. " + c1 + "\n" 
                 prompt += f"<image>. The correct caption is: {correct_option}\n"
             
             prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
             "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            "the captions. Clearly state your final answer as a single word either <First> or <Second>.\n")
             prompt += f"<image>. The caption is: "
-            prompt += "A. " + caption_0.strip() + "\n"
-            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "First. " + caption_0.strip() + "\n"
+            prompt += "Second. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -367,8 +367,8 @@ class ARO_generative_evaluation:
         logits = outputs.logits.squeeze()
         # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
         # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits
 
