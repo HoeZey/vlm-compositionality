@@ -401,9 +401,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def blip2_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
+            prompt = "USER: Given this image and two candidate captions (first and second), which caption is the better description of the given image? Only give a single word answer - 'first' or 'second'.\n"
+            prompt += "first. " + caption_0 + "\n"
+            prompt += "second. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -437,8 +437,8 @@ class ARO_generative_evaluation:
         logits = outputs.logits.squeeze()
 
         # print("logits.shape", logits.shape)
-        a_logits = torch.mean(logits[:, 1037]) ## 1037 is the token id for 'A' based on bert tokenizer
-        b_logits = torch.mean(logits[:, 1038]) ## 1038 is the token id for 'B' based on bert tokenizer
+        a_logits = torch.mean(logits[:, 78]) ## 1037 is the token id for 'A' based on bert tokenizer
+        b_logits = torch.mean(logits[:, 200]) ## 1038 is the token id for 'B' based on bert tokenizer
 
         return a_logits, b_logits        
 
@@ -478,9 +478,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def cogvlm_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
+            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
+            prompt += "First. " + caption_0 + "\n"
+            prompt += "Second. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -523,8 +523,8 @@ class ARO_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits        
 
