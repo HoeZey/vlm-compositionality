@@ -557,7 +557,7 @@ class ARO_generative_evaluation:
             # joint_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn)
 
             model_name_short = self.model_name.split("/")[1].split('-')[0]
-            log_file_path = f'./log_run/{model_name_short}/aro/{self.evaluation_type}_{dataset_name}_log.csv'
+            log_file_path = f'./log_run/{model_name_short}/aro/{self.evaluation_type}_{self.prompt_name}_{dataset_name}_log.csv'
                         
             use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
             if use_existing_file:
