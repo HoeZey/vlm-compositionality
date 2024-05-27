@@ -144,6 +144,14 @@ class ARO_generative_evaluation:
             synthetic_examples.append(example)
 
         self.synthetic_examples = synthetic_examples
+        
+        # Add special answer tokens
+        self.answer_token_a = '[A]'
+        self.answer_token_b = '[B]'
+        self.tokenizer.add_special_tokens({'additional_special_tokens': [self.answer_token_a, self.answer_token_b]})
+        self.model.resize_token_embeddings(len(self.tokenizer))
+        print(self.tokenizer.all_special_tokens)
+        print(self.tokenizer.all_special_ids)
 
 
     def load_dataset(self, dataset_name, image_preprocess=None, text_perturb_fn=None, image_perturb_fn=None, download=False, *args, **kwargs):
@@ -322,9 +330,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def llava_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
-            prompt += "First. " + caption_0 + "\n"
-            prompt += "Second. " + caption_1 + "\n"  
+            prompt = f"USER: <image>\n Given this image and two candidate captions ({self.answer_token_a} and {self.answer_token_b}), which caption is the better description of the given image? Only give a single word answer - '{self.answer_token_a} or {self.answer_token_b}.\n"
+            prompt += f"{self.answer_token_a}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -336,23 +344,23 @@ class ARO_generative_evaluation:
                 if random_order == 0:
                     c0 = x['caption_A']
                     c1 = x['caption_B']
-                    correct_option = 'First'
+                    correct_option = self.answer_token_a
                 else:
                     c0 = x['caption_B']
                     c1 = x['caption_A']
-                    correct_option = 'Second'
+                    correct_option = self.answer_token_b
                 fewshot_images.append(x['image'])
-                prompt += "First. " + c0 + "\n"
-                prompt += "Second. " + c1 + "\n" 
+                prompt += f"{self.answer_token_a}. " + c0 + "\n"
+                prompt += f"{self.answer_token_b}. " + c1 + "\n" 
                 prompt += f"<image>. The correct caption is: {correct_option}\n"
             
             prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
             "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the captions. Clearly state your final answer as a single word either <First> or <Second>.\n")
+            f"the captions. Clearly state your final answer as a single word either {self.answer_token_a} or {self.answer_token_b}\n")
             prompt += f"<image>. The caption is: "
-            prompt += "First. " + caption_0.strip() + "\n"
-            prompt += "Second. " + caption_1.strip() + "\n"
+            prompt += f"{self.answer_token_a}. " + caption_0.strip() + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1.strip() + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -360,15 +368,12 @@ class ARO_generative_evaluation:
             print("Prompt type not supported!")
         
         # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
-
         
         # Contrast logits
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
-        a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_a)]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        b_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_b)]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
         return a_logits, b_logits
 
@@ -401,9 +406,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def blip2_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: Given this image and two candidate captions (first and second), which caption is the better description of the given image? Only give a single word answer - 'first' or 'second'.\n"
-            prompt += "first. " + caption_0 + "\n"
-            prompt += "second. " + caption_1 + "\n"  
+            prompt = f"USER: Given this image and two candidate captions ({self.answer_token_a} and {self.answer_token_b}), which caption is the better description of the given image? Only give a single word answer - '{self.answer_token_a} or {self.answer_token_b}.\n"
+            prompt += f"{self.answer_token_a}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -414,18 +419,18 @@ class ARO_generative_evaluation:
                 c0 = x['caption_A']
                 c1 = x['caption_B']
                 fewshot_images.append(x['image'])
-                prompt += "A. " + c0.strip() + "\n"
-                prompt += "B. " + c1.strip() + "\n"
-                prompt += f"Caption A. matches the image, the answer is <A.>.\n"
+                prompt += f"{self.answer_token_a}. " + c0.strip() + "\n"
+                prompt += f"{self.answer_token_b}. " + c1.strip() + "\n"
+                prompt += f"Caption {self.answer_token_a} matches the image, the answer is {self.answer_token_a}.\n"
 
-            prompt += ("USER: Given this image and two candidate captions (A and B), "
+            prompt += (f"USER: Given this image and two candidate captions ({self.answer_token_a} amd {self.answer_token_b}), "
               "which caption is the better description of the given image? Think step-by-step "
               "and analyze each caption against the image. Begin by describing the key elements "
               "visible in the image. Then, compare these elements with the details mentioned in "
               "each caption to determine which one matches better. After providing a detailed "
-              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
-            prompt += "A. " + c0.strip() + "\n"
-            prompt += "B. " + c1.strip() + "\n"
+              f"explanation of your reasoning, clearly state your final answer as {self.answer_token_a} or {self.answer_token_b}.\n")
+            prompt += f"{self.answer_token_a}. " + c0.strip() + "\n"
+            prompt += f"{self.answer_token_b}. " + c1.strip() + "\n"
             prompt += f"ASSISTANT: "
             max_new_tokens = 500
         else:
@@ -436,9 +441,8 @@ class ARO_generative_evaluation:
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
 
-        # print("logits.shape", logits.shape)
-        a_logits = torch.mean(logits[:, 78]) ## 1037 is the token id for 'A' based on bert tokenizer
-        b_logits = torch.mean(logits[:, 200]) ## 1038 is the token id for 'B' based on bert tokenizer
+        a_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_a)]) 
+        b_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_b)])
 
         return a_logits, b_logits        
 
@@ -478,9 +482,9 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def cogvlm_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
-            prompt += "First. " + caption_0 + "\n"
-            prompt += "Second. " + caption_1 + "\n"  
+            prompt = f"USER: <image>\n Given this image and two candidate captions ({self.answer_token_a} and {self.answer_token_b}), which caption is the better description of the given image? Only give a single word answer - '{self.answer_token_a} or {self.answer_token_b}.\n"
+            prompt += f"{self.answer_token_a}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
 
@@ -491,19 +495,19 @@ class ARO_generative_evaluation:
                 c0 = x['caption_A']
                 c1 = x['caption_B']
                 fewshot_images.append(x['image'])
-                prompt += "A. " + c0.strip() + "\n"
-                prompt += "B. " + c1.strip() + "\n"
-                prompt += f"<image>. Caption A. matches the image, the answer is <A.>.\n"
+                prompt += f"{self.answer_token_a}. " + c0.strip() + "\n"
+                prompt += f"{self.answer_token_b}. " + c1.strip() + "\n"
+                prompt += f"Caption {self.answer_token_a} matches the image, the answer is {self.answer_token_a}.\n"
 
-            prompt += ("USER: <image>\nGiven this image and two candidate captions (A and B), "
+            prompt += (f"USER: Given this image and two candidate captions ({self.answer_token_a} amd {self.answer_token_b}), "
               "which caption is the better description of the given image? Think step-by-step "
               "and analyze each caption against the image. Begin by describing the key elements "
               "visible in the image. Then, compare these elements with the details mentioned in "
               "each caption to determine which one matches better. After providing a detailed "
-              "explanation of your reasoning, clearly state your final answer as <A> or <B>.\n")
-            prompt += "A. " + c0.strip() + "\n"
-            prompt += "B. " + c1.strip() + "\n"
-            prompt += f"<image> ASSISTANT: "
+              f"explanation of your reasoning, clearly state your final answer as {self.answer_token_a} or {self.answer_token_b}.\n")
+            prompt += f"{self.answer_token_a}. " + c0.strip() + "\n"
+            prompt += f"{self.answer_token_b}. " + c1.strip() + "\n"
+            prompt += f"ASSISTANT: "
             max_new_tokens = 500
         else:
             print("Prompt type not supported!")
@@ -511,6 +515,7 @@ class ARO_generative_evaluation:
         if image.mode is not 'RGB':
             print(image.mode)
             image = image.convert('RGB')
+
         input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, images=[image])
         inputs = {
             'input_ids': input_by_model['input_ids'].unsqueeze(0).to(self.device),
@@ -523,8 +528,8 @@ class ARO_generative_evaluation:
 
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
-        a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        a_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_a)]) 
+        b_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_b)])
 
         return a_logits, b_logits        
 
