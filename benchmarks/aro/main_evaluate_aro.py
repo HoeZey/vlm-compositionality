@@ -538,7 +538,7 @@ class ARO_generative_evaluation:
         batch_size = 1
         num_workers = 0 #chnage this to 4 when finished debugging
         
-        metrics = {}
+        metrics = {dataset: -1 for dataset in ["VG_Relation", "VG_Attribution", "COCO_Order", "Flickr30k_Order"]}
         if self.evaluation_type == 'logits':
             if self.model_name == "llava-hf/llava-1.5-7b-hf":
                 captioner = self.llava_caption_logits 
@@ -565,7 +565,7 @@ class ARO_generative_evaluation:
 
             model_name_short = self.model_name.split("/")[1].split('-')[0]
             log_file_path = f'./log_run/{model_name_short}/aro/{self.evaluation_type}_{self.prompt_name}_{dataset_name}_log.csv'
-                        
+            
             use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
             if use_existing_file:
                 with open(log_file_path, 'r') as f:
@@ -580,7 +580,7 @@ class ARO_generative_evaluation:
             for i, example in tqdm(enumerate(dataset)):
                 if i < start:
                     continue
-                
+
                 image_options = example['image_options']
                 caption_options = example['caption_options']                
                 if self.evaluation_type == 'logits':
