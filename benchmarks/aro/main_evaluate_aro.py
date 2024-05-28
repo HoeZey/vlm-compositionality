@@ -479,9 +479,11 @@ class ARO_generative_evaluation:
         # a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
         # b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
-        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens).cpu()
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1].strip()
+        gc.collect()
+        torch.cuda.empty_cache()
         # print(output)
         # answer_by_model = json.loads(output)['answer']
 
