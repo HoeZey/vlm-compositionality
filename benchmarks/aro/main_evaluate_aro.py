@@ -198,7 +198,7 @@ class ARO_generative_evaluation:
         rag_fewshot.append({"image": im4, "caption_A": caption_40, "caption_B": caption_41})
         rag_fewshot.append({"image": im5, "caption_A": caption_50, "caption_B": caption_51})
 
-        self.rag_fewshot = rag_fewshot  #[:1] for 1-shot
+        self.rag_fewshot = rag_fewshot[:1] # for 1-shot
 
 
     def load_dataset(self, dataset_name, image_preprocess=None, text_perturb_fn=None, image_perturb_fn=None, download=False, *args, **kwargs):
@@ -482,7 +482,7 @@ class ARO_generative_evaluation:
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1].strip()
-        print(output)
+        # print(output)
         # answer_by_model = json.loads(output)['answer']
 
         return output, random_order
