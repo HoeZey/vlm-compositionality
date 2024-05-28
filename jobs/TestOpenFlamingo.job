@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_mig
+#SBATCH --gpus=1
+#SBATCH --job-name=RunInference
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=9
+#SBATCH --time=01:00:00
+#SBATCH --output=slurm_output_%A.out
+
+module purge
+module load 2022
+module load Anaconda3/2022.05
+
+cd $HOME/vlm-compositionality/
+
+source activate fomo-vlm-comp
+
+srun python test_openflamingo.py

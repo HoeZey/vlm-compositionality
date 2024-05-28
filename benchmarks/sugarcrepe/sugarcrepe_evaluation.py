@@ -199,14 +199,59 @@ class SugarCrepe_generative_evaluation:
     @torch.no_grad()
     def llava_caption_choice(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Only give a single character answer - 'A' or 'B'.\n"
-            prompt += "A. " + caption_0 + "\n"
-            prompt += "B. " + caption_1 + "\n"  
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Clearly state your final answer only in a single character, either A or B.\n"
+            random_order = random.randint(0, 1)
+            if random_order == 0:
+                c0 = caption_0
+                c1 = caption_1
+                correct_option = 'A'
+            else:
+                c0 = caption_1
+                c1 = caption_0
+                correct_option = 'B'
+            prompt += "A. " + c0 + "\n"
+            prompt += "B. " + c1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
-        # else:
-        #     print("Prompt type not supported!")
+            inputs = self.processor(text=prompt, images=[image], return_tensors="pt").to(self.device)
 
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.synthetic_examples:
+                random_order = random.randint(0, 1)
+                if random_order == 0:
+                    c0 = x['caption_A']
+                    c1 = x['caption_B']
+                    correct_option = 'A'
+                else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    correct_option = 'B'
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
+                prompt += f"<image>. The correct caption is: {correct_option}\n"
+            
+            prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer only in a single character, either A or B.\n")
+            # prompt += "\{ 'answer': <'A' or 'B'>, 'reason': <your reasoning>\}\n"
+            prompt += f"<image>. The caption is: "
+
+            random_order = random.randint(0, 1)
+            if random_order == 0:
+                prompt += "A. " + caption_0.strip() + "\n"
+                prompt += "B. " + caption_1.strip() + "\n"
+            else:
+                prompt += "A. " + caption_1.strip() + "\n"
+                prompt += "B. " + caption_0.strip() + "\n"
+            
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        
         elif self.prompt_name == "auto-cot":  # Chain of Thought Prompting ( Option 2 : (Auto-CoT) Best/structure so far)
             prompt = ("USER: <image>\nGiven this image and two candidate captions (A and B), "
               "which caption is the better description of the given image? Think step-by-step "
@@ -264,14 +309,14 @@ class SugarCrepe_generative_evaluation:
             prompt += "ASSISTANT: \n"
             max_new_tokens = 500
         
-        inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1].strip()
         print(output)
-        return output
+        return output, random_order
 
     @torch.no_grad()
     def llava_caption_logits(self, image, caption_0, caption_1):
@@ -655,30 +700,35 @@ class SugarCrepe_generative_evaluation:
                 else:
                     start = 0
                 print(c, 'i_start', start)
-                with open(log_file_path, 'a+') as f:
-                    if not use_existing_file:
+
+                if not use_existing_file:
+                    with open(log_file_path, 'a+') as f:
                         f.write('id,correct')
 
-                    for i, data in tqdm(enumerate(data_dict), total=len(data_dict), desc=f'evaluating {c}'):
-                        if i < start:
-                          continue
-                        correct = 0
+                for i, data in tqdm(enumerate(data_dict), desc=f'evaluating {c}'):
+                    if i < start:
+                        continue
 
-                        answer = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
-                        # if answer[0].lower() == 'a':
-                        if 'cot' in self.prompt_name:
-                            match = re.search('<A>', answer)
-                            if match :
-                                correct = 1
-                            elif re.search(' A ', answer) and not re.search('Caption A', answer):
-                                correct = 1
-                            else:
-                                correct = 0
+                    answer, choice_order = captioner(data['image'], data['tested_labels'][0], data['tested_labels'][1])
+                    if choice_order == 0:
+                        correct = int(answer.lower() == 'a')
+                    else:
+                        correct = int(answer.lower() == 'b')
+                    # if answer[0].lower() == 'a':
+                    if 'cot' in self.prompt_name:
+                        match = re.search('<A>', answer)
+                        if match :
+                            correct = 1
+                        elif re.search(' A ', answer) and not re.search('Caption A', answer):
+                            correct = 1
                         else:
-                            if answer[0].lower() == 'a':
-                                correct = 1
-                            else:
-                                correct = 0
+                            correct = 0
+                    else:
+                        if answer[0].lower() == 'a':
+                            correct = 1
+                        else:
+                            correct = 0
+                    with open(log_file_path, 'a+') as f:
                         f.write(f'{i},{correct}\n')
                 # count = len(data_dict)
                 metrics[c] = pd.read_csv(log_file_path)['correct'].mean()

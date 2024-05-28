@@ -53,3 +53,4 @@ outputs/
 wandb/
 scripts/
 benchmarks/dci/data/
+*.out

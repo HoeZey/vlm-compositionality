@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=RunInference
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=00:20:00
+#SBATCH --output=slurm_output_%A.out
+
+module purge
+module load 2022
+module load Anaconda3/2022.05
+
+cd $HOME/vlm-compositionality/
+
+source activate fomo-vlm-comp
+# srun python -m spacy download en_core_web_sm
+
+srun python main_generative_benchmarks.py \
+    --model_list llava-hf/llava-1.5-7b-hf \
+    --benchmark_list aro \
+    --aro_subsets VG_Relation \
+    --prompt_type_list rag \
+    --evaluation_type logits
+
+    # --aro_subsets VG_Relation VG_Attribution \
+    # --aro_subsets COCO_Order Flickr30k_Order \
+    # --prompt_type_list synth gpt4-shorterprompt
