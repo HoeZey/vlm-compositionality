@@ -103,7 +103,6 @@ class SugarCrepe_evaluation:
         return {"SugarCrepe_accuracies": acc_val}
     
 
-
 class SugarCrepe_generative_evaluation:
     """
     This class is used to evaluate the OpenCLIP model on the SugarCrepe dataset
@@ -195,6 +194,21 @@ class SugarCrepe_generative_evaluation:
         rag_fewshot.append({"image": im5, "caption_A": caption_50, "caption_B": caption_51})
 
         self.rag_fewshot = rag_fewshot
+        
+        # Add special answer tokens
+        self.answer_token_a = '<A>'
+        self.answer_token_b = '<B>'
+        new_tokens = {'additional_special_tokens': [self.answer_token_a, self.answer_token_b]}
+        if 'cogvlm' in self.model_name:
+            self.tokenizer.add_special_tokens(new_tokens)
+            self.model.resize_token_embeddings(len(self.tokenizer))
+        else:
+            self.processor.tokenizer.add_special_tokens(new_tokens)
+            self.model.resize_token_embeddings(len(self.processor.tokenizer))
+            self.tokenizer = self.processor.tokenizer
+
+        print(self.tokenizer.all_special_tokens)
+        print(self.tokenizer.all_special_ids)
 
     @torch.no_grad()
     def llava_caption_choice(self, image, caption_0, caption_1):
@@ -276,9 +290,9 @@ class SugarCrepe_generative_evaluation:
     @torch.no_grad()
     def llava_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
-            prompt += "First. " + caption_0 + "\n"
-            prompt += "Second. " + caption_1 + "\n"  
+            prompt = f"USER: <image>\n Given this image and two candidate captions ({self.answer_token_a} and {self.answer_token_b}), which caption is the better description of the given image? Only give a single word answer - '{self.answer_token_a} or {self.answer_token_b}.\n"
+            prompt += f"{self.answer_token_a}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
@@ -290,23 +304,23 @@ class SugarCrepe_generative_evaluation:
                 if random_order == 0:
                     c0 = x['caption_A']
                     c1 = x['caption_B']
-                    correct_option = 'First.'
+                    correct_option = self.answer_token_a
                 else:
                     c0 = x['caption_B']
                     c1 = x['caption_A']
-                    correct_option = 'Second.'
+                    correct_option = self.answer_token_b
                 fewshot_images.append(x['image'])
-                prompt += "First. " + c0 + "\n"
-                prompt += "Second. " + c1 + "\n" 
+                prompt += f"{self.answer_token_a}. " + c0 + "\n"
+                prompt += f"{self.answer_token_b}. " + c1 + "\n" 
                 prompt += f"<image>. The correct caption is: {correct_option}\n"
             
             prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
             "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the captions. Clearly state your final answer as a single word either <First> or <Second>.\n")
+            f"the captions. Clearly state your final answer as a single word either {self.answer_token_a} or {self.answer_token_b}\n")
             prompt += f"<image>. The caption is: "
-            prompt += "First. " + caption_0.strip() + "\n"
-            prompt += "Second. " + caption_1.strip() + "\n"
+            prompt += f"{self.answer_token_a}. " + caption_0.strip() + "\n"
+            prompt += f"{self.answer_token_b}. " + caption_1.strip() + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -318,14 +332,14 @@ class SugarCrepe_generative_evaluation:
                 if random_order == 0:
                     c0 = x['caption_A']
                     c1 = x['caption_B']
-                    correct_option = 'First.'
+                    correct_option = self.answer_token_a
                 else:
                     c0 = x['caption_B']
                     c1 = x['caption_A']
-                    correct_option = 'Second.'
+                    correct_option = self.answer_token_b
                 fewshot_images.append(x['image'])
-                prompt += "First. " + c0 + "\n"
-                prompt += "Second. " + c1 + "\n" 
+                prompt += f"{self.answer_token_a}. " + c0 + "\n"
+                prompt += f"{self.answer_token_b}. " + c1 + "\n" 
                 prompt += f"<image>. The correct caption is: {correct_option}\n"
             
             prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "

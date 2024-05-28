@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 import open_clip
 from torchvision import transforms
 import random
+import string
 
 from benchmarks.aro.misc import seed_all, _default_collate
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
@@ -146,9 +147,21 @@ class ARO_generative_evaluation:
         self.synthetic_examples = synthetic_examples
         
         # Add special answer tokens
-        self.answer_token_a = '[A]'
-        self.answer_token_b = '[B]'
-        self.tokenizer.add_special_tokens({'additional_special_tokens': [self.answer_token_a, self.answer_token_b]})
+        answer_token_length = 16
+        random.seed(42)
+        characters = string.ascii_letters + string.digits + '!#$%&*+,-.:;=?@^_`|~'
+        string_a = ''.join([random.choice(characters) for _ in range(answer_token_length)])
+        string_b = ''.join([random.choice(characters) for _ in range(answer_token_length)])
+        print(f'Special token A: {string_a}\nSpecial token B: {string_b}')
+        self.answer_token_a = f'<{string_a}>'
+        self.answer_token_b = f'<{string_b}>'
+
+        if 'cogvlm' in self.model_name:
+            self.tokenizer.add_special_tokens({'additional_special_tokens': [self.answer_token_a, self.answer_token_b]})
+        else:
+            self.processor.tokenizer.add_special_tokens({'additional_special_tokens': [self.answer_token_a, self.answer_token_b]})
+            self.tokenizer = self.processor.tokenizer
+        
         self.model.resize_token_embeddings(len(self.tokenizer))
         print(self.tokenizer.all_special_tokens)
         print(self.tokenizer.all_special_ids)
@@ -317,7 +330,6 @@ class ARO_generative_evaluation:
         else:
             inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
-        
         inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         # Generate
@@ -331,10 +343,12 @@ class ARO_generative_evaluation:
     def llava_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
             prompt = f"USER: <image>\n Given this image and two candidate captions ({self.answer_token_a} and {self.answer_token_b}), which caption is the better description of the given image? Only give a single word answer - '{self.answer_token_a} or {self.answer_token_b}.\n"
-            prompt += f"{self.answer_token_a}. " + caption_0 + "\n"
-            prompt += f"{self.answer_token_b}. " + caption_1 + "\n"  
+            a_correct = random.choice([True, False])
+            prompt += f"{self.answer_token_a if a_correct else self.answer_token_b}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b if a_correct else self.answer_token_a}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+            inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
 
         elif self.prompt_name == "synth":
             prompt = "USER: Does the image match the caption?.\n"
@@ -359,23 +373,22 @@ class ARO_generative_evaluation:
             "visible in the image. Then, compare these elements with the details mentioned in "
             f"the captions. Clearly state your final answer as a single word either {self.answer_token_a} or {self.answer_token_b}\n")
             prompt += f"<image>. The caption is: "
-            prompt += f"{self.answer_token_a}. " + caption_0.strip() + "\n"
-            prompt += f"{self.answer_token_b}. " + caption_1.strip() + "\n"  
+            a_correct = random.choice([True, False])
+            prompt += f"{self.answer_token_a if a_correct else self.answer_token_b}. " + caption_0 + "\n"
+            prompt += f"{self.answer_token_b if a_correct else self.answer_token_a}. " + caption_1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
         else:
             print("Prompt type not supported!")
-        
-        # inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
-        
+                
         # Contrast logits
         outputs = self.model(**inputs)
         logits = outputs.logits.squeeze()
         a_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_a)]) ## 319 is the token id for 'A' based on llama2 tokenizer
         b_logits = torch.mean(logits[:, self.tokenizer.convert_tokens_to_ids(self.answer_token_b)]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
-        return a_logits, b_logits
+        return a_logits, b_logits, a_correct
 
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe
@@ -583,14 +596,16 @@ class ARO_generative_evaluation:
                 with open(log_file_path, 'a+') as f:
                     f.write('id,correct\n')
             for i, example in tqdm(enumerate(dataset)):
+                if i > 200:
+                    break
                 if i < start:
                     continue
 
                 image_options = example['image_options']
                 caption_options = example['caption_options']                
                 if self.evaluation_type == 'logits':
-                    answerA, answerB = captioner(image_options[0], caption_options[0], caption_options[1])
-                    correct = int(answerA > answerB)
+                    answerA, answerB, a_correct = captioner(image_options[0], caption_options[0], caption_options[1])
+                    correct = int(answerA > answerB if a_correct else answerB > answerA)
                 elif 'cot' in self.prompt_name:
                     answer = captioner(image_options[0], caption_options[0], caption_options[1])
                     match = re.search('<A>', answer)
