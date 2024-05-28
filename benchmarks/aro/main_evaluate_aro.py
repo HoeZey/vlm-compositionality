@@ -483,8 +483,6 @@ class ARO_generative_evaluation:
         generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens).cpu()
         output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         output = output.split('ASSISTANT:')[1].strip()
-        gc.collect()
-        torch.cuda.empty_cache()
         # print(output)
         # answer_by_model = json.loads(output)['answer']
 
@@ -722,6 +720,11 @@ class ARO_generative_evaluation:
                         correct = 1
                     else:
                         correct = 0
+                
+                if i % 250 == 0:
+                    gc.collect()
+                    torch.cuda.empty_cache()
+
                 with open(log_file_path, 'a+') as f:
                     f.write(f'{i},{correct}\n')
 
