@@ -54,7 +54,7 @@ def main(_A: argparse.Namespace):
     for model_name in _A.model_list: 
         if model_name == "llava-hf/llava-1.5-7b-hf":
             model = LlavaForConditionalGeneration.from_pretrained(
-                model_name, device_map='auto', torch_dtype=TORCH_TYPE
+                model_name, device_map='sequential', torch_dtype=TORCH_TYPE
             ).eval()
             processor = AutoProcessor.from_pretrained(model_name)
             tokenizer = None
