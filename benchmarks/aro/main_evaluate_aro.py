@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 import open_clip
 from torchvision import transforms
 import random
+import requests
 
 from benchmarks.aro.misc import seed_all, _default_collate
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
@@ -144,6 +145,60 @@ class ARO_generative_evaluation:
             synthetic_examples.append(example)
 
         self.synthetic_examples = synthetic_examples
+
+        im1 = Image.open(
+        requests.get(
+            "http://images.cocodataset.org/val2017/000000039769.jpg", stream=True
+            ).raw
+        )
+        im2 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028137.jpg",
+                stream=True
+            ).raw
+        )
+        im3 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000028352.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im4 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000442.jpg", 
+                stream=True
+            ).raw
+        )
+
+        im5 = Image.open(
+            requests.get(
+                "http://images.cocodataset.org/test-stuff2017/000000000448.jpg", 
+                stream=True
+            ).raw
+        )
+
+        caption_10 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
+        caption_11 = "Two cats sleeping under an purple blanket below a couch with no tv remotes next to them."
+        caption_20 = "A bathroom with a sink on the bottom right, a cabinet in the bottom left."
+        caption_21 = "A bathroom with a sink on the bottom left, a cabinet in the top left."
+        caption_30 = "A table full of salty and sweet food inside a cozy room."
+        caption_31 = "A table without any food outside a cozy room."
+        caption_40 = "A room with computers on top of tables and some people working on them."
+        caption_41 = "A room with computers under the tables and no people working on them."
+        caption_50 = "A group of women talking while sitting at a table."
+        caption_51 = "A group of women standing next to a table and talking."
+
+        
+
+        rag_fewshot = []
+        rag_fewshot.append({"image": im1, "caption_A": caption_10, "caption_B": caption_11})
+        rag_fewshot.append({"image": im2, "caption_A": caption_20, "caption_B": caption_21})
+        rag_fewshot.append({"image": im3, "caption_A": caption_30, "caption_B": caption_31})
+        rag_fewshot.append({"image": im4, "caption_A": caption_40, "caption_B": caption_41})
+        rag_fewshot.append({"image": im5, "caption_A": caption_50, "caption_B": caption_51})
+
+        self.rag_fewshot = rag_fewshot  #[:1] for 1-shot
 
 
     def load_dataset(self, dataset_name, image_preprocess=None, text_perturb_fn=None, image_perturb_fn=None, download=False, *args, **kwargs):
@@ -342,6 +397,42 @@ class ARO_generative_evaluation:
             prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
             for x in self.synthetic_examples:
+                random_order = random.randint(0, 1)
+                if random_order == 0:
+                    c0 = x['caption_A']
+                    c1 = x['caption_B']
+                    correct_option = 'A'
+                else:
+                    c0 = x['caption_B']
+                    c1 = x['caption_A']
+                    correct_option = 'B'
+                fewshot_images.append(x['image'])
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
+                prompt += f"<image>. The correct caption is: {correct_option}\n"
+            
+            prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
+            "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the captions. Clearly state your final answer only in a single character, either A or B.\n")
+            # prompt += "\{ 'answer': <'A' or 'B'>, 'reason': <your reasoning>\}\n"
+            prompt += f"<image>. The caption is: "
+
+            random_order = random.randint(0, 1)
+            if random_order == 0:
+                prompt += "A. " + caption_0.strip() + "\n"
+                prompt += "B. " + caption_1.strip() + "\n"
+            else:
+                prompt += "A. " + caption_1.strip() + "\n"
+                prompt += "B. " + caption_0.strip() + "\n"
+            
+            prompt += "ASSISTANT:"
+            max_new_tokens = 500
+            inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
+        elif self.prompt_name == "rag":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            for x in self.rag_fewshot:
                 random_order = random.randint(0, 1)
                 if random_order == 0:
                     c0 = x['caption_A']
