@@ -15,6 +15,7 @@ import open_clip
 from torchvision import transforms
 import random
 import requests
+import gc
 
 from benchmarks.aro.misc import seed_all, _default_collate
 from benchmarks.aro.model_zoo.clip_models import CLIPWrapper
