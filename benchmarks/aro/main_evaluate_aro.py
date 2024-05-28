@@ -322,11 +322,21 @@ class ARO_generative_evaluation:
     @torch.no_grad()
     def llava_caption_logits(self, image, caption_0, caption_1):
         if self.prompt_name == "gpt4-shorterprompt":
-            prompt = "USER: <image>\n Given this image and two candidate captions (First and Second), which caption is the better description of the given image? Only give a single word answer - 'First' or 'Second'.\n"
-            prompt += "First. " + caption_0 + "\n"
-            prompt += "Second. " + caption_1 + "\n"  
+            prompt = "USER: <image>\n Given this image and two candidate captions (A and B), which caption is the better description of the given image? Clearly state your final answer only in a single character, either A or B.\n"
+            random_order = random.randint(0, 1)
+            if random_order == 0:
+                c0 = caption_0
+                c1 = caption_1
+                correct_option = 'A'
+            else:
+                c0 = caption_1
+                c1 = caption_0
+                correct_option = 'B'
+            prompt += "A. " + c0 + "\n"
+            prompt += "B. " + c1 + "\n"  
             prompt += "ASSISTANT:"
             max_new_tokens = 35
+            inputs = self.processor(text=prompt, images=[image], return_tensors="pt").to(self.device)
 
         elif self.prompt_name == "synth":
             prompt = "USER: Does the image match the caption?.\n"
@@ -336,23 +346,31 @@ class ARO_generative_evaluation:
                 if random_order == 0:
                     c0 = x['caption_A']
                     c1 = x['caption_B']
-                    correct_option = 'First'
+                    correct_option = 'A'
                 else:
                     c0 = x['caption_B']
                     c1 = x['caption_A']
-                    correct_option = 'Second'
+                    correct_option = 'B'
                 fewshot_images.append(x['image'])
-                prompt += "First. " + c0 + "\n"
-                prompt += "Second. " + c1 + "\n" 
+                prompt += "A. " + c0 + "\n"
+                prompt += "B. " + c1 + "\n" 
                 prompt += f"<image>. The correct caption is: {correct_option}\n"
             
             prompt += ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
             "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the captions. Clearly state your final answer as a single word either <First> or <Second>.\n")
+            "the captions. Clearly state your final answer only in a single character, either A or B.\n")
+            # prompt += "\{ 'answer': <'A' or 'B'>, 'reason': <your reasoning>\}\n"
             prompt += f"<image>. The caption is: "
-            prompt += "First. " + caption_0.strip() + "\n"
-            prompt += "Second. " + caption_1.strip() + "\n"
+
+            random_order = random.randint(0, 1)
+            if random_order == 0:
+                prompt += "A. " + caption_0.strip() + "\n"
+                prompt += "B. " + caption_1.strip() + "\n"
+            else:
+                prompt += "A. " + caption_1.strip() + "\n"
+                prompt += "B. " + caption_0.strip() + "\n"
+            
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -363,14 +381,20 @@ class ARO_generative_evaluation:
 
         
         # Contrast logits
-        outputs = self.model(**inputs)
-        logits = outputs.logits.squeeze()
-        # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
-        a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
-        b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        # outputs = self.model(**inputs)
+        # logits = outputs.logits.squeeze()
+        # # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        # # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+        # a_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
+        # b_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
-        return a_logits, b_logits
+        generate_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        output = self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output = output.split('ASSISTANT:')[1].strip()
+        print(output)
+        # answer_by_model = json.loads(output)['answer']
+
+        return output, random_order
 
     @torch.no_grad()
     def blip2_caption_choice(self, image, caption_0, caption_1): #same as sugarcrepe
@@ -584,8 +608,11 @@ class ARO_generative_evaluation:
                 image_options = example['image_options']
                 caption_options = example['caption_options']                
                 if self.evaluation_type == 'logits':
-                    answerA, answerB = captioner(image_options[0], caption_options[0], caption_options[1])
-                    correct = int(answerA > answerB)
+                    answer, choice_order = captioner(image_options[0], caption_options[0], caption_options[1])
+                    if choice_order == 0:
+                        correct = int(answer.lower() == 'a')
+                    else:
+                        correct = int(answer.lower() == 'b')
                 elif 'cot' in self.prompt_name:
                     answer = captioner(image_options[0], caption_options[0], caption_options[1])
                     match = re.search('<A>', answer)
