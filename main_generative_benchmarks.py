@@ -117,7 +117,7 @@ def main(_A: argparse.Namespace):
                     print(PROMPT_LIST)
                     # print(model)
                     benchmark_module = Winoground_generative_evaluation(model_name, model, processor, tokenizer, TORCH_TYPE, DEVICE, prompt_name, _A.evaluation_type, _A.no_hard_negatives)
-                    eval_results = benchmark_module.evaluate_winoground()
+                    eval_results = benchmark_module.evaluate_winoground(resume_from_checkpoint=True)
                     
                     if _A.evaluation_type == "accuracy_score":
                         wandb.log({'Winoground_accuracy' : eval_results["accuracy_score"]})

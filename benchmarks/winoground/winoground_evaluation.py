@@ -10,6 +10,7 @@ from tqdm import tqdm
 import random
 import re
 from fewshot.examples import get_examples
+import os
 
 from transformers import LlamaTokenizerFast
 
@@ -148,13 +149,13 @@ class Winoground_generative_evaluation:
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
         random.seed(2023)
         subset_idx = random.sample(range(len(winoground)), 100)
-        fewshot_data = []
-        for idx in subset_idx:
-            fewshot_data.append(winoground[idx])
-        # len(subset_idx[:20])
-        #taking the first 20 for time purposes
-        # subset_idx = subset_idx[:8]
-        self.fewshot_data = fewshot_data[:n_shot]
+        # fewshot_data = []
+        # for idx in subset_idx:
+        #     fewshot_data.append(winoground[idx])
+        # # len(subset_idx[:20])
+        # #taking the first 20 for time purposes
+        # # subset_idx = subset_idx[:8]
+        # self.fewshot_data = fewshot_data[:n_shot]
 
         ## Retrieval augmented generation
         
@@ -191,20 +192,25 @@ class Winoground_generative_evaluation:
             ).raw
         )
 
-        caption_1 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
-        caption_2 = "A bathroom with a sink, cabinet, mirror and a shower curtain."
-        caption_3 = "A table full of salty and sweet food inside a cozy room."
-        caption_4 = "A room full of compute screens and some people working on them."
-        caption_5 = "A group of women talking about environmental issues while sitting at a table."
+        caption_10 = "Two cats sleeping on a purple blanket on top of a couch with two tv remotes next to them."
+        caption_11 = "Two cats sleeping under an purple blanket below a couch with no tv remotes next to them."
+        caption_20 = "A bathroom with a sink on the bottom right, a cabinet in the bottom left."
+        caption_21 = "A bathroom with a sink on the bottom left, a cabinet in the top left."
+        caption_30 = "A table full of salty and sweet food inside a cozy room."
+        caption_31 = "A table without any food outside a cozy room."
+        caption_40 = "A room with computers on top of tables and some people working on them."
+        caption_41 = "A room with computers under the tables and no people working on them."
+        caption_50 = "A group of women talking while sitting at a table."
+        caption_51 = "A group of women standing next to a table and talking."
 
         
 
         rag_fewshot = []
-        rag_fewshot.append({"image": im1, "caption": caption_1})
-        rag_fewshot.append({"image": im2, "caption": caption_2})
-        rag_fewshot.append({"image": im3, "caption": caption_3})
-        rag_fewshot.append({"image": im4, "caption": caption_4})
-        rag_fewshot.append({"image": im5, "caption": caption_5})
+        rag_fewshot.append({"image": im1, "caption_A": caption_10, "caption_B": caption_11})
+        rag_fewshot.append({"image": im2, "caption_A": caption_20, "caption_B": caption_21})
+        rag_fewshot.append({"image": im3, "caption_A": caption_30, "caption_B": caption_31})
+        rag_fewshot.append({"image": im4, "caption_A": caption_40, "caption_B": caption_41})
+        rag_fewshot.append({"image": im5, "caption_A": caption_50, "caption_B": caption_51})
 
         self.rag_fewshot = rag_fewshot
 
@@ -605,10 +611,10 @@ class Winoground_generative_evaluation:
             prompt += f"<image>. The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
         
-        elif self.prompt_name == "synth":
+        elif self.prompt_name == "rag":
             prompt = "USER: Does the image match the caption?.\n"
             fewshot_images = []
-            for x in self.synthetic_examples:
+            for x in self.rag_fewshot:
                 c0 = x['caption_A']
                 c1 = x['caption_B']
                 fewshot_images.append(x['image'])
@@ -624,6 +630,33 @@ class Winoground_generative_evaluation:
             "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
             prompt += f"<image> The caption is: {caption.strip()}. ASSISTANT: "
             max_new_tokens = 500
+        
+        elif self.prompt_name == "synth":
+            prompt = "USER: Does the image match the caption?.\n"
+            fewshot_images = []
+            # print("self.synthetic_examples[0]",self.synthetic_examples[0])
+            # print("self.synthetic_examples",self.synthetic_examples)
+            counter = 0
+            for x in self.synthetic_examples:
+                if counter > 1:
+                    continue
+                c0 = x['caption_A']
+                c1 = x['caption_B']
+                fewshot_images.append(x['image'])
+                # print("fewshot_images", fewshot_images)
+                # fewshot_images = fewshot_images.append(x['image'])
+                prompt += f"<image>. The caption is: {c0.strip()}. The Caption matches the image, the answer is <Yes>.\n"
+                prompt += f"The caption is: {c1.strip()}. The Caption does not match the image, the answer is <No>.\n"
+                counter += 1
+
+            prompt += ("\n Given an image and a caption," 
+            "does the caption accurately describe the given image? Analyze only the last caption against the last image. Think step-by-step"
+            "and analyze the caption against the image. Begin by describing the key elements "
+            "visible in the image. Then, compare these elements with the details mentioned in "
+            "the caption. After providing a brief explanation of your reasoning, clearly state your final answer as <Yes> or <No>.\n")
+            prompt += f"<image> The caption is: {caption.strip()}. ASSISTANT: "
+            max_new_tokens = 500
+            
 
         if self.prompt_name == "few-shot" or self.prompt_name == "rag-few-shot" or self.prompt_name == "synth":
             inputs = self.processor(text=prompt, images=fewshot_images + [image], return_tensors="pt").to(self.device)
@@ -1268,7 +1301,7 @@ class Winoground_generative_evaluation:
 
         return yes_logits
 
-    def evaluate_winoground(self):
+    def evaluate_winoground(self, resume_from_checkpoint=False):
 
         auth_token = "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" # Replace with an auth token, which you can get from your huggingface account: Profile -> Settings -> Access Tokens -> New Token
         winoground = load_dataset("facebook/winoground", use_auth_token=auth_token, trust_remote_code=True)["test"]
@@ -1277,9 +1310,12 @@ class Winoground_generative_evaluation:
 
         ##images are all winoground images
         random.seed(2023)
-        subset_idx = random.sample(range(len(winoground)), 300)
+        # subset_idx = random.sample(range(len(winoground)), 400)
+        subset_idx = list(range(400))
+        # subset_idx = winoground
+        # print("winoground", winoground)
         # subset_idx = range(len(winoground))
-        subset_idx = subset_idx[:50]
+        # subset_idx = subset_idx[:50]
         # taking the first 20 for time purposes
         
         if self.evaluation_type == "logits":
@@ -1290,52 +1326,76 @@ class Winoground_generative_evaluation:
             image_caption_match_results = {}
 
             for idx in tqdm(subset_idx):
-                image_0 = winoground[idx]["image_0"].convert("RGB")
-                # image_1 = winoground[idx]["image_1"].convert("RGB")
-                caption_0 = winoground[idx]["caption_0"]
-                print("caption_0", caption_0)
-                if self.no_hard_negatives:
-                    # print("using no Hard negatives")
-                    if idx+1 < len(winoground):
-                        print("idx+1", idx+1)
-                        image_1 = winoground[idx+1]["image_1"].convert("RGB")
-                        caption_1 = winoground[idx+1]["caption_1"]
-                        print("caption_1", caption_1)
-                    else:
-                        print("idx-1", idx-1)
-                        image_1 = winoground[idx-1]["image_1"].convert("RGB")
-                        caption_1 = winoground[idx-1]["caption_1"]
-                        print("caption_1", caption_1)
+                # print(idx)
+                
+                model_name_short = self.model_name.split("/")[1].split('-')[0]
+                log_file_path = f'./log_run/llava/winoground/{self.evaluation_type}_{idx}_log.csv'
+                
+                use_existing_file = os.path.exists(log_file_path) and resume_from_checkpoint
+                if use_existing_file:
+                    with open(log_file_path, 'r') as f:
+                        print("f.readlines()[-1].split(',')[0]", f.readlines()[-1].split(',')[0])
+                        start = int(f.readlines()[-1].split(',')[0]) + 1
+                    
                 else:
-                    image_1 = winoground[idx]["image_1"].convert("RGB")
-                    caption_1 = winoground[idx]["caption_1"]
-                    print("caption_1", caption_1)
-        
-                print ("Example: #", total)
+                    start = 0
+                print(idx, 'i_start', start)
+                with open(log_file_path, 'a+') as f:
+                    if not use_existing_file:
+                        f.write('id, text_correct_count, image_correct_count, group_correct_count\n')
 
-                result = {}
+                    if idx < start:
+                        continue
 
-                if self.model_name == "llava-hf/llava-1.5-7b-hf": 
-                    captioner = self.llava_image_to_caption_logits
+                    image_0 = winoground[idx]["image_0"].convert("RGB")
+                    # image_1 = winoground[idx]["image_1"].convert("RGB")
+                    caption_0 = winoground[idx]["caption_0"]
+                    print("caption_0", caption_0)
+                    if self.no_hard_negatives:
+                        # print("using no Hard negatives")
+                        if idx+1 < len(winoground):
+                            print("idx+1", idx+1)
+                            image_1 = winoground[idx+1]["image_1"].convert("RGB")
+                            caption_1 = winoground[idx+1]["caption_1"]
+                            print("caption_1", caption_1)
+                        else:
+                            print("idx-1", idx-1)
+                            image_1 = winoground[idx-1]["image_1"].convert("RGB")
+                            caption_1 = winoground[idx-1]["caption_1"]
+                            print("caption_1", caption_1)
+                    else:
+                        image_1 = winoground[idx]["image_1"].convert("RGB")
+                        caption_1 = winoground[idx]["caption_1"]
+                        print("caption_1", caption_1)
+            
+                    print ("Example: #", total)
 
-                elif self.model_name == "Salesforce/blip2-opt-2.7b":
-                    captioner = self.BLIP2_image_to_caption_logits
-                
-                elif self.model_name == "THUDM/cogvlm-chat-hf":
-                    captioner = self.cogvlm_image_to_caption_logits
-                
-                
-                result["c0_i0"] = captioner(caption_0, image_0)
-                result["c0_i1"] = captioner(caption_0, image_1)
-                result["c1_i0"] = captioner(caption_1, image_0)
-                result["c1_i1"] = captioner(caption_1, image_1)
+                    result = {}
 
-                text_correct_count += 1 if self.text_correct(result) else 0
-                image_correct_count += 1 if self.image_correct(result) else 0
-                group_correct_count += 1 if self.group_correct(result) else 0
+                    if self.model_name == "llava-hf/llava-1.5-7b-hf": 
+                        captioner = self.llava_image_to_caption_logits
 
-                total += 1
-                print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
+                    elif self.model_name == "Salesforce/blip2-opt-2.7b":
+                        captioner = self.BLIP2_image_to_caption_logits
+                    
+                    elif self.model_name == "THUDM/cogvlm-chat-hf":
+                        captioner = self.cogvlm_image_to_caption_logits
+                    
+                    
+                    result["c0_i0"] = captioner(caption_0, image_0)
+                    result["c0_i1"] = captioner(caption_0, image_1)
+                    result["c1_i0"] = captioner(caption_1, image_0)
+                    result["c1_i1"] = captioner(caption_1, image_1)
+
+                    text_correct_count += 1 if self.text_correct(result) else 0
+                    image_correct_count += 1 if self.image_correct(result) else 0
+                    group_correct_count += 1 if self.group_correct(result) else 0
+                    
+                    f.write(f'{idx},{text_correct_count, image_correct_count, group_correct_count}\n')
+                    # f.write(f'{i},{correct}\n')
+                    # f.write(f'{i},{correct}\n')
+                    total += 1
+                    print ("Current Acc: {}/{} = {}%\n".format(group_correct_count, total, group_correct_count / total * 100))
 
             return {"text_score": text_correct_count/total, "image_score": image_correct_count/total, "group_score": group_correct_count/total}
 

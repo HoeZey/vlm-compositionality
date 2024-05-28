@@ -425,14 +425,14 @@ class SugarCrepe_generative_evaluation:
                     if random_order == 0:
                         c0 = x['caption_A']
                         c1 = x['caption_B']
-                        correct_option = 'A'
+                        correct_option = 'First'
                     else:
                         c0 = x['caption_B']
                         c1 = x['caption_A']
-                        correct_option = 'B'
+                        correct_option = 'Second'
                     prompt = "USER: Match the given image with the correct caption.\n"
-                    prompt += "A. " + c0 + "\n"
-                    prompt += "B. " + c1 + "\n" 
+                    prompt += "First. " + c0 + "\n"
+                    prompt += "Second. " + c1 + "\n" 
                     prompt += f"<image>. The correct caption is: {correct_option}.\n"
                     prompt += "Summarize your observations and reasoning for this choice in 100 words.\n"
                     prompt += "ASSISTANT:"
@@ -467,10 +467,10 @@ class SugarCrepe_generative_evaluation:
             prompt = ("USER: \nSimilarly, given an image and two captions choose the correct caption. "
             "Think step-by-step and analyze the captions against the image. Begin by describing the key elements "
             "visible in the image. Then, compare these elements with the details mentioned in "
-            "the captions. Clearly state your final answer as a single character either <A> or <B>.\n")
+            "the captions. Clearly state your final answer as a single character either <First> or <Second>.\n")
             prompt += f"<image>. The caption is: "
-            prompt += "A. " + caption_0.strip() + "\n"
-            prompt += "B. " + caption_1.strip() + "\n"
+            prompt += "First. " + caption_0.strip() + "\n"
+            prompt += "Second. " + caption_1.strip() + "\n"
             prompt += "ASSISTANT:"
             max_new_tokens = 500
             input_by_model = self.model.build_conversation_input_ids(self.tokenizer, query=prompt, history=self.cogvlm_history, images=[image])
@@ -486,10 +486,12 @@ class SugarCrepe_generative_evaluation:
 
             outputs = self.model(**inputs)
             logits = outputs.logits.squeeze()
-            a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
-            b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+            # a_logits = torch.mean(logits[:, 319]) ## 319 is the token id for 'A' based on llama2 tokenizer
+            # b_logits = torch.mean(logits[:, 350]) ## 350 is the token id for 'B' based on llama2 tokenizer
+            first_logits = torch.mean(logits[:, 3824]) ## 319 is the token id for 'A' based on llama2 tokenizer
+            second_logits = torch.mean(logits[:, 6440]) ## 350 is the token id for 'B' based on llama2 tokenizer
 
-            return a_logits, b_logits   
+            return first_logits, second_logits   
         else:
             print("Prompt type not supported!")
         
