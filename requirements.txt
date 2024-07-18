@@ -1,20 +1,20 @@
-- matplotlib==3.7.2
-- numpy==1.25.2
-- pytest==7.4.0
-- tqdm==4.66.1
-- torch==2.1.2
-- pathlib==1.0.1
-- datasets
-- "huggingface_hub[torch, cli]"
-- python-dotenv
-- open_clip_torch
-- notebook
-- open_flamingo
-- transformers
-- easydict
-- gdown
-- spacy
-- accelerate
-- bitsandbytes
-- xformers
-- einops
+matplotlib==3.7.2
+numpy==1.25.2
+pytest==7.4.0
+tqdm==4.66.1
+torch==2.1.2
+pathlib==1.0.1
+datasets
+huggingface_hub[torch, cli]
+python-dotenv
+open_clip_torch
+notebook
+open_flamingo
+transformers
+easydict
+gdown
+spacy
+accelerate
+bitsandbytes
+xformers
+einops
