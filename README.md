@@ -3,7 +3,7 @@
 ### M. Nulli, Anesa Ibrahimi, Avik Pal, Hoshe Lee, Ivona Najdenkoska
 #### University of Amsterdam
 
-[[OpenReview](https://openreview.net/forum?id=AoqRlc4lrv)]
+[[arXiv](https://arxiv.org/abs/2407.15487)] [[OpenReview](https://openreview.net/forum?id=AoqRlc4lrv)]
 
 Paper published at [ICML Foundation Models in the Wild Workshop](https://icml-fm-wild.github.io/). 
 
